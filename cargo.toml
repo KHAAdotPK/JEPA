@@ -1,0 +1,15 @@
+[package]
+name = "JEPA" # JEPA for images
+version = "0.0.1"
+edition = "2021"
+build = "build.rs"
+
+#[workspace]
+#members = [    
+#    "lib/numrs/tests",    
+#]
+
+[dependencies]
+# Crates
+argsv = { path = "./lib/argsv-rust/lib/rust/argsv/" }
+png = { path = "./lib/PNG-rust/lib/rust/png/" }
