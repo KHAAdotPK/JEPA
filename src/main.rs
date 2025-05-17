@@ -11,13 +11,13 @@ mod numrs;
 use std::{cell::RefCell, fs::{File, metadata}, io::Read, path::Path, rc::Rc, str};
 use argsv::{start, find_arg, stop, help, help_line, common_argc, process_argument};
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
-use png::{Png, Chunk}; 
+use png::{Png, Chunk, InflatedData}; 
 
-#[link(name = "png", kind = "dylib")]
+/*#[link(name = "png", kind = "dylib")]
 extern {
  
     fn big_endian_read_u32(ptr: *const u8) -> u32;     
-}
+}*/
 
 fn main() {
 
@@ -101,18 +101,36 @@ fn main() {
                     let png = Png::new(buffer);
                     let mut iter = png.chunks.iter();
 
+                    // Create a buffer to hold all concatenated IDAT data
+                    let mut all_idat_data = Vec::new();
+
                     println!("Number of chunks = {}", png.chunks.len());
 
                     while let Some(chunk) = iter.next() {
-                        println!("Length = {}", unsafe { big_endian_read_u32(chunk.length.clone().as_mut_ptr()) });
+                        //println!("Length = {}", unsafe { big_endian_read_u32(chunk.length.clone().as_mut_ptr()) });
+                        println!("Length = {}", chunk.get_length() );
                         println!("Type = [ {} {} {} {} ], {}", 
                             chunk.type_name[0], 
                             chunk.type_name[1], 
                             chunk.type_name[2], 
-                            chunk.type_name[3], 
-                            str::from_utf8(&chunk.type_name).unwrap()
+                            chunk.type_name[3],                             
+                            chunk.get_type_name()
                         );
+
+                        if chunk.get_type_name() == "IDAT" {
+                            
+                            // Check if it matches the actual data length
+                            assert_eq!(chunk.get_length() as usize, chunk.data.len());
+
+                            all_idat_data.extend_from_slice(&chunk.data);
+
+                            //let dat = chunk.get_inflated_data();
+                        }
                     }
+
+                    println!("Length of all_idat_data = {}", all_idat_data.len());
+
+                    let dat: *mut InflatedData = png.get_inflated_data(&all_idat_data);
                 }
             }
 
