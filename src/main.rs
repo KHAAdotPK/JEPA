@@ -117,6 +117,17 @@ fn main() {
                             chunk.get_type_name()
                         );
 
+                        if chunk.get_type_name() == "IHDR" {
+
+                            println!("Width = {}", chunk.get_width());
+                            println!("Height = {}", chunk.get_height());
+                            println!("Bit depth = {}", chunk.get_bit_depth() );
+                            println!("Color type = {}", chunk.get_color_type() );
+                            println!("Compression method = {}", chunk.get_compression_method() );
+                            println!("Filter method = {}", chunk.get_filter_method() );
+                            println!("Interlace method = {}", chunk.get_interlace_method() );
+                        }
+
                         if chunk.get_type_name() == "IDAT" {
                             
                             // Check if it matches the actual data length
