@@ -121,11 +121,17 @@ fn main() {
 
                             println!("Width = {}", chunk.get_width());
                             println!("Height = {}", chunk.get_height());
-                            println!("Bit depth = {}", chunk.get_bit_depth() );
-                            println!("Color type = {}", chunk.get_color_type() );
-                            println!("Compression method = {}", chunk.get_compression_method() );
-                            println!("Filter method = {}", chunk.get_filter_method() );
-                            println!("Interlace method = {}", chunk.get_interlace_method() );
+                            /*
+                                Which Bit depth and Color type are important for us?
+                                Bit depth = 8, 16, Color type = 2 // IDAT is contiguois array of a 3 bytes per pixel. Each pixel is an R,G,B triple                                                                    
+                                Bit depth = 1, 2, 4, 8, Color type = 3 // IDAT is contiguois array of 1, 2, 4, or b bit entities. Each entity is a palette index; a PLTE chunk shall appear.
+                             */
+                            println!("Bit depth = {}", chunk.get_bit_depth() ); // The number of bits per sample or per palette index (not per pixel). Valid values are 1, 2, 4, 8, and 16. Not all values are allowed for all colour types.
+                            println!("Color type = {}", chunk.get_color_type() ); // The number of channels per pixel. Valid values are 0, 2, 3, 4, and 6. Not all values are allowed for all colour types.
+
+                            println!("Compression method = {}", chunk.get_compression_method() ); // The compression method used. Valid values are 0 and 1. Not all values are allowed for all colour types.
+                            println!("Filter method = {}", chunk.get_filter_method() ); // The filter method used. Valid values are 0 and 1. Not all values are allowed for all colour types.
+                            println!("Interlace method = {}", chunk.get_interlace_method() ); // The interlace method used. Valid values are 0 and 1. Not all values are allowed for all colour types.
                         }
 
                         if chunk.get_type_name() == "IDAT" {
