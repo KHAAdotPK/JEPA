@@ -13,12 +13,6 @@ use argsv::{start, find_arg, stop, help, help_line, common_argc, process_argumen
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
 use png::{Png, Chunk, DeflatedData, InflatedData}; 
 
-/*#[link(name = "png", kind = "dylib")]
-extern {
- 
-    fn big_endian_read_u32(ptr: *const u8) -> u32;     
-}*/
-
 fn main() {
 
     let command_lines = "h -h help --help ? /? (Displays help screen)\n\
@@ -102,47 +96,14 @@ fn main() {
                     let mut iter = png.chunks.iter();
 
                     // Create a buffer to hold all concatenated IDAT data
-                    let mut all_idat_data = Vec::new();
+                    //let mut all_idat_data = Vec::new();
+
+                    let all_idat_data = png.get_all_idat_data();
 
                     println!("Number of chunks = {}", png.chunks.len());
 
-                    while let Some(chunk) = iter.next() {
-                        //println!("Length = {}", unsafe { big_endian_read_u32(chunk.length.clone().as_mut_ptr()) });
-                        println!("Length = {}", chunk.get_length() );
-                        println!("Type = [ {} {} {} {} ], {}", 
-                            chunk.type_name[0], 
-                            chunk.type_name[1], 
-                            chunk.type_name[2], 
-                            chunk.type_name[3],                             
-                            chunk.get_type_name()
-                        );
-
-                        if chunk.get_type_name() == "IHDR" {
-
-                            println!("Width = {}", chunk.get_width());
-                            println!("Height = {}", chunk.get_height());
-                            /*
-                                Which Bit depth and Color type are important for us?
-                                Bit depth = 8, 16, Color type = 2 // IDAT is contiguois array of a 3 bytes per pixel. Each pixel is an R,G,B triple                                                                    
-                                Bit depth = 1, 2, 4, 8, Color type = 3 // IDAT is contiguois array of 1, 2, 4, or b bit entities. Each entity is a palette index; a PLTE chunk shall appear.
-                             */
-                            println!("Bit depth = {}", chunk.get_bit_depth() ); // The number of bits per sample or per palette index (not per pixel). Valid values are 1, 2, 4, 8, and 16. Not all values are allowed for all colour types.
-                            println!("Color type = {}", chunk.get_color_type() ); // The number of channels per pixel. Valid values are 0, 2, 3, 4, and 6. Not all values are allowed for all colour types.
-
-                            println!("Compression method = {}", chunk.get_compression_method() ); // The compression method used. Valid values are 0 and 1. Not all values are allowed for all colour types.
-                            println!("Filter method = {}", chunk.get_filter_method() ); // The filter method used. Valid values are 0 and 1. Not all values are allowed for all colour types.
-                            println!("Interlace method = {}", chunk.get_interlace_method() ); // The interlace method used. Valid values are 0 and 1. Not all values are allowed for all colour types.
-                        }
-
-                        if chunk.get_type_name() == "IDAT" {
-                            
-                            // Check if it matches the actual data length
-                            assert_eq!(chunk.get_length() as usize, chunk.data.len());
-
-                            all_idat_data.extend_from_slice(&chunk.data);                            
-                        }
-                    }
-
+                    png.traverse();
+                    
                     println!("Length of all_idat_data = {}", all_idat_data.len());
 
                     let dat: *mut InflatedData = png.get_inflated_data(&all_idat_data);
