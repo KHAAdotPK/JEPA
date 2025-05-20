@@ -93,7 +93,10 @@ fn main() {
                     drop(f); 
                     
                     let png = Png::new(buffer);
-                    let mut iter = png.chunks.iter();
+                    //let mut iter = png.chunks.iter();
+
+                    let mut iter = png.get_chunks().iter();
+
 
                     // Create a buffer to hold all concatenated IDAT data
                     //let mut all_idat_data = Vec::new();
