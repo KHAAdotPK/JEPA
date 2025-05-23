@@ -11,7 +11,7 @@ mod numrs;
 use std::{cell::RefCell, fs::{File, metadata}, io::Read, path::Path, rc::Rc, str};
 use argsv::{start, find_arg, stop, help, help_line, common_argc, process_argument};
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
-use png::{Png, Chunk, DeflatedData, InflatedData}; 
+use png::{Png, Chunk, DeflatedData, InflatedData, create_uncompressed_png}; 
 
 fn main() {
 
@@ -97,7 +97,27 @@ fn main() {
 
                     let mut iter = png.get_chunks().iter();
 
+                    let chunk_ihdr: Option<&Chunk> = png.get_chunk_by_type("IHDR");
+                    let mut width: u32 = 0;
+                    let mut height: u32 = 0;
+                   
+                    if chunk_ihdr != None {
 
+                        width = u32::from_be_bytes([
+                            chunk_ihdr.unwrap().data[0], 
+                            chunk_ihdr.unwrap().data[1], 
+                            chunk_ihdr.unwrap().data[2], 
+                            chunk_ihdr.unwrap().data[3]
+                        ]);
+                       
+                        height = u32::from_be_bytes([
+                            chunk_ihdr.unwrap().data[4], 
+                            chunk_ihdr.unwrap().data[5], 
+                            chunk_ihdr.unwrap().data[6], 
+                            chunk_ihdr.unwrap().data[7]
+                        ]);                       
+                    }
+                                        
                     // Create a buffer to hold all concatenated IDAT data
                     //let mut all_idat_data = Vec::new();
 
@@ -110,6 +130,10 @@ fn main() {
                     println!("Length of all_idat_data = {}", all_idat_data.len());
 
                     let dat: *mut InflatedData = png.get_inflated_data(&all_idat_data);
+
+                    //let png_of_inflated_data: Option<Png> = create_uncompressed_png(dat);
+
+                    let png_of_inflated_data = create_uncompressed_png(width, height, dat);
 
                     /*                        
                         This Rust code snippet demonstrates different ways to access the len() method of a DeflatedData struct when you have a raw pointer (*mut DeflatedData) to it.
