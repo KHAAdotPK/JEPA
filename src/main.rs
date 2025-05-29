@@ -121,7 +121,9 @@ fn main() {
                     // Create a buffer to hold all concatenated IDAT data
                     //let mut all_idat_data = Vec::new();
 
-                    let all_idat_data = png.get_all_idat_data();
+                    let all_idat_data: Vec<u8> = png.get_all_idat_data_as_vec();
+
+                    let all_idat_data_deflated: *mut DeflatedData = png.get_all_idat_data_as_DeflatedData();
 
                     println!("Number of chunks = {}", png.chunks.len());
 
@@ -131,9 +133,19 @@ fn main() {
 
                     let dat: *mut InflatedData = png.get_inflated_data(&all_idat_data);
 
+                    let deflated_data: *mut DeflatedData = png.get_deflated_data(dat);
+
+                    println!("Length of deflated_data = {}", unsafe { (*deflated_data).len() });
+                    
+
                     //let png_of_inflated_data: Option<Png> = create_uncompressed_png(dat);
 
-                    let png_of_inflated_data = create_uncompressed_png(width, height, dat);
+                    //let png_of_inflated_data = create_uncompressed_png(width, height, dat);
+                    
+                    // Soni, this works last time I check
+                    /*let png_of_inflated_data = create_uncompressed_png(width, height, all_idat_data_new);*/
+                    
+                    let png_of_inflated_data = create_uncompressed_png(width, height, deflated_data as *mut InflatedData);
 
                     /*                        
                         This Rust code snippet demonstrates different ways to access the len() method of a DeflatedData struct when you have a raw pointer (*mut DeflatedData) to it.
