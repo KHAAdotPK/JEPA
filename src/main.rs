@@ -8,18 +8,20 @@
 #[path = "../lib/numrs/mod.rs"]
 mod numrs;
 
-use std::{cell::RefCell, fs::{File, metadata}, io::Read, path::Path, rc::Rc, str};
+use std::{cell::RefCell, fs::{File, metadata}, io::Read, io::Write, path::Path, rc::Rc, str};
 use argsv::{start, find_arg, stop, help, help_line, common_argc, process_argument};
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
-use png::{Png, Chunk, DeflatedData, InflatedData, create_uncompressed_png}; 
+use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_uncompressed_png}; 
 
 fn main() {
 
     let command_lines = "h -h help --help ? /? (Displays help screen)\n\
                          v -v version --version /v (Displays version number)\n\
                          t -t traverse --traverse /t (Traverses PNG file structure and displays it)\n\
-                         d -d delete --delete /d (Deletes the named chunk from the PNG file)\r\n\
-                         verbose --verbose (Displays detailed information or feedback about the execution of another command)";
+                         d -d delete --delete /d (Deletes the named chunk from the PNG file)\n\
+                         verbose --verbose (Displays detailed information or feedback about the execution of another command)\n\
+                         suffix --suffix (Suffix for the output PNG file)\n";
+
 
     // Get the command-line arguments as an iterator
     let args: Vec<String> = std::env::args().collect();
@@ -145,7 +147,53 @@ fn main() {
                     // Soni, this works last time I check
                     /*let png_of_inflated_data = create_uncompressed_png(width, height, all_idat_data_new);*/
                     
-                    let png_of_inflated_data = create_uncompressed_png(width, height, deflated_data as *mut InflatedData);
+                    /*let png_of_inflated_data: Option<Png> = create_uncompressed_png(width, height, deflated_data as *mut InflatedData);*/
+
+                    //let path_to_out_png_file: Path = path.conca
+
+                    let output_path = path.with_extension("").with_extension(&format!("{}.png", constants::PNG_OUTPUT_FILE_SUFFIX.trim_end_matches(".png")));
+
+                    println!("Output path: {}", output_path.display().to_string());
+                    
+                    let png_of_inflated_data: Option<Png> = create_uncompressed_png(width, height, deflated_data as *mut InflatedData, &output_path);
+
+                    match png_of_inflated_data {
+
+                        Some (png_of_inflated_data) => {
+
+                            let _ = png_of_inflated_data.create_file(&output_path);
+                        }
+
+                        None => {
+
+                            println!("Failed to create PNG of inflated data");
+                        }
+                    }
+
+                    /*match (png_of_inflated_data) {
+
+                        Some (png_of_inflated_data) => {
+
+                            //png_of_inflated_data.save(&path);
+
+                            // Write buffer data to file
+                            match File::create("foo.png") {
+                            Ok(mut file) => {
+                                match file.write_all((png_of_inflated_data).data) {
+                                    Ok(_) => println!("Successfully wrote PNG data to foo.png"),
+                                    Err(e) => eprintln!("Failed to write PNG data: {}", e),
+                                }
+                            }
+                            Err(e) => eprintln!("Failed to create foo.png: {}", e),
+                        }
+        
+                        }
+
+                        None => {
+
+                            println!("Failed to create PNG of inflated data");
+                        }
+                    } */
 
                     /*                        
                         This Rust code snippet demonstrates different ways to access the len() method of a DeflatedData struct when you have a raw pointer (*mut DeflatedData) to it.
