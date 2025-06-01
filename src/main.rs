@@ -13,6 +13,8 @@ use argsv::{start, find_arg, stop, help, help_line, common_argc, process_argumen
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
 use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_uncompressed_png}; 
 
+use jepa::{training_loop};
+
 fn main() {
 
     let command_lines = "h -h help --help ? /? (Displays help screen)\n\
@@ -258,6 +260,8 @@ fn main() {
                         */
                         //drop(boxed_dat); // Commented out because it is implicitly dropped when the scope ends
                     };
+
+                    training_loop();
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////                   
                 }
             }
