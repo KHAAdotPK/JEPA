@@ -1,6 +1,6 @@
 # JEPA Implementation Plan in Rust - Enhanced Outline
 
-This document expands on your initial plan, offering suggestions and considerations for each step to aid your JEPA implementation in Rust.
+This document expands on initial plan, offering suggestions and considerations for each step to aid the JEPA implementation in Rust.
 
 ---
 
