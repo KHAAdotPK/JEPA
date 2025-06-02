@@ -13,7 +13,7 @@ use argsv::{start, find_arg, stop, help, help_line, common_argc, process_argumen
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
 use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_uncompressed_png}; 
 
-use jepa::{Model, ModelConfig, ImageDataTensorShape};
+use jepa::{Model, ModelConfig, ImageDataTensorShape, ImageDataTensorShapeFormat};
 
 fn main() {
 
@@ -267,7 +267,7 @@ fn main() {
 
                     let model = Model::new(model_config, image_data_tensor);
 
-                    model.start_training_loop();
+                    model.start_training_loop(ImageDataTensorShapeFormat::CHW);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////                   
                 }
             }
