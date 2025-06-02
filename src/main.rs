@@ -13,7 +13,7 @@ use argsv::{start, find_arg, stop, help, help_line, common_argc, process_argumen
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
 use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_uncompressed_png}; 
 
-use jepa::{training_loop};
+use jepa::{Model, ModelConfig, ImageDataTensorShape};
 
 fn main() {
 
@@ -261,7 +261,13 @@ fn main() {
                         //drop(boxed_dat); // Commented out because it is implicitly dropped when the scope ends
                     };
 
-                    training_loop();
+                    let image_data_tensor = ImageDataTensorShape::new(0, 0, 3);
+
+                    let model_config = ModelConfig::new(0.01, 19, 1);
+
+                    let model = Model::new(model_config, image_data_tensor);
+
+                    model.start_training_loop();
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////                   
                 }
             }

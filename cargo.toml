@@ -13,3 +13,11 @@ build = "build.rs"
 # Crates
 argsv = { path = "./lib/argsv-rust/lib/rust/argsv/" }
 png = { path = "./lib/PNG-rust/lib/rust/png/" }
+
+[[bin]]
+name = "jepa"
+path = "src/main.rs"
+
+[lib]
+name = "jepa"
+path = "implementation/lib.rs"
