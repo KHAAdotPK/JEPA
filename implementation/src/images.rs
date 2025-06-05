@@ -1,7 +1,10 @@
 /*
- * implementation/lib.rs
+ * implementation/model.rs
  * Q@khaa.pk
  */
+ 
+use std::{rc::Rc, cell::RefCell}; 
+use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
 
 /// Configuration structure for machine learning model hyperparameters.
 /// 
@@ -114,6 +117,7 @@ impl ModelConfig {
 /// The format parameter allows the training loop to adapt its data preprocessing
 /// and tensor operations based on the input format, ensuring optimal performance
 /// regardless of the source data layout.
+#[derive(PartialEq)]
 pub enum ImageDataTensorShapeFormat {
     CHW,  // The primary choice
     HWC,  // For interfacing with certain image libraries
@@ -251,6 +255,227 @@ impl Model {
             
            model_config: model_config.clone(),
            image_data_tensor_shape: image_data_tensor_shape.clone(),
+        }
+    }
+
+    pub fn create_input_pipeline_old_old(&self, input_data_tensor_shape_format: ImageDataTensorShapeFormat) -> Box<Dimensions> {
+    
+        // Create a proper 3D tensor shape for image data: [batch, channels, height, width]
+        // For JEPA, typically we'd have something like: batch_size -> channels -> height*width
+    
+        // Example: 32 batches -> 3 channels -> 224x224 pixels
+
+        let batch_dim: Dimensions = Dimensions::new(0, self.model_config.get_batch_size()); // batch size
+        let channel_dim: Dimensions;
+        let height_dim: Dimensions; 
+
+        if input_data_tensor_shape_format == ImageDataTensorShapeFormat::HWC {
+            // If HWC format is specified, we need to convert it to CHW
+            // This is a placeholder for conversion logic if needed 
+            /*channel_dim = Dimensions::new(0, self.image_data_tensor_shape.get_channels())
+                .with_next(Rc::new(RefCell::new(Dimensions::new(0, self.image_data_tensor_shape.get_height())
+                    .with_next(Rc::new(RefCell::new(Dimensions::new(0, self.image_data_tensor_shape.get_width())))))));*/
+
+            channel_dim = Dimensions::new( self.image_data_tensor_shape.get_channels(), self.image_data_tensor_shape.get_width() );
+            height_dim = Dimensions::new(0, self.image_data_tensor_shape.get_height());
+                            
+
+            batch_dim.with_next(Rc::new(RefCell::new(height_dim)));
+            //height_dim.with_prev(Rc::new(RefCell::new(batch_dim)));
+
+
+            // Convert HWC to CHW
+            // This is a placeholder for actual conversion logic if needed
+            // In practice, you would need to rearrange the dimensions accordingly     
+
+        } else if input_data_tensor_shape_format == ImageDataTensorShapeFormat::CHW {
+
+            // If CHW format is specified, we can proceed directly
+            
+        } else {
+            // Handle unsupported formats
+            panic!("Unsupported ImageDataTensorShapeFormat");
+        }
+
+
+        /*let pixel_dims = Dimensions::new(224, 224);  // width=224, height=224
+        let channel_dims = Dimensions::new(0, 3)     // 3 channels (RGB)
+            .with_next(Rc::new(RefCell::new(pixel_dims)));
+        let batch_dims = Dimensions::new(0, 32)      // batch size of 32
+            .with_next(Rc::new(RefCell::new(channel_dims)));
+    
+        //Box::new(batch_dims)*/
+
+        Box::new(Dimensions::new(0, 0)) // Placeholder for actual tensor shape creation
+        
+    }
+
+    // Version with both next AND prev pointers (doubly-linked)
+    pub fn create_input_pipeline_with_prev(&self, input_data_tensor_shape_format: ImageDataTensorShapeFormat) -> Box<Dimensions> {
+    
+        let batch_size = self.model_config.get_batch_size();
+        let channels = self.image_data_tensor_shape.get_channels();
+        let height = self.image_data_tensor_shape.get_height();
+        let width = self.image_data_tensor_shape.get_width();
+
+        match input_data_tensor_shape_format {
+            ImageDataTensorShapeFormat::CHW => {
+                // Create the dimensions first
+                let width_dim = Dimensions::new(width, height);
+                let channel_dim = Dimensions::new(0, channels);
+                let batch_dim = Dimensions::new(0, batch_size);
+            
+                // Wrap them in Rc<RefCell<>> for sharing
+                let width_rc = Rc::new(RefCell::new(width_dim));
+                let channel_rc = Rc::new(RefCell::new(channel_dim));
+                let batch_rc = Rc::new(RefCell::new(batch_dim));
+            
+                // Set up the forward links (next)
+                batch_rc.borrow_mut().set_next(Some(channel_rc.clone()));
+                channel_rc.borrow_mut().set_next(Some(width_rc.clone()));
+            
+                // Set up the backward links (prev)
+                channel_rc.borrow_mut().set_prev(Some(batch_rc.clone()));
+                width_rc.borrow_mut().set_prev(Some(channel_rc.clone()));
+            
+                // Extract the root dimension (avoid borrow checker issues)
+                let result = {
+                    let borrowed = batch_rc.borrow();
+                    borrowed.clone()
+                };
+            
+                Box::new(result)
+            },
+        
+            ImageDataTensorShapeFormat::HWC => {
+                // Create the dimensions
+                let channel_dim = Dimensions::new(channels, width);
+                let height_dim = Dimensions::new(0, height);
+                let batch_dim = Dimensions::new(0, batch_size);
+            
+                // Wrap them in Rc<RefCell<>>
+                let channel_rc = Rc::new(RefCell::new(channel_dim));
+                let height_rc = Rc::new(RefCell::new(height_dim));
+                let batch_rc = Rc::new(RefCell::new(batch_dim));
+            
+                // Set up forward links
+                batch_rc.borrow_mut().set_next(Some(height_rc.clone()));
+                height_rc.borrow_mut().set_next(Some(channel_rc.clone()));
+            
+                // Set up backward links
+                height_rc.borrow_mut().set_prev(Some(batch_rc.clone()));
+                channel_rc.borrow_mut().set_prev(Some(height_rc.clone()));
+            
+                // Extract result
+                let result = {
+                    let borrowed = batch_rc.borrow();
+                    borrowed.clone()
+                };
+            
+                Box::new(result)
+            },
+        
+            _ => {
+                // Default case - simple 2D
+                Box::new(Dimensions::new(width, height))
+            }
+        }
+    }
+    
+    // Helper function to add prev pointers to an existing chain
+    fn add_prev_pointers(mut root: Dimensions) -> Dimensions {
+        let mut current_opt = Some(Rc::new(RefCell::new(root.clone())));
+        let mut prev_rc: Option<Rc<RefCell<Dimensions>>> = None;
+    
+        while let Some(current_rc) = current_opt {
+            // Set prev pointer if we have a previous node
+            if let Some(prev) = &prev_rc {
+                current_rc.borrow_mut().set_prev(Some(prev.clone()));
+            }
+        
+            // Move to next node
+            let next_opt = current_rc.borrow().next();
+            prev_rc = Some(current_rc);
+            current_opt = next_opt;
+        }
+    
+        root
+    }
+
+    // BETTER APPROACH: Use the builder pattern from your Dimensions struct
+    pub fn create_input_pipeline_builder_pattern(&self, input_data_tensor_shape_format: ImageDataTensorShapeFormat) -> Box<Dimensions> {
+    
+        let batch_size = self.model_config.get_batch_size();
+        let channels = self.image_data_tensor_shape.get_channels();
+        let height = self.image_data_tensor_shape.get_height();
+        let width = self.image_data_tensor_shape.get_width();
+
+        match input_data_tensor_shape_format {
+            ImageDataTensorShapeFormat::CHW => {
+                // Build using the fluent interface - much cleaner!
+                let width_dim = Dimensions::new(width, height);
+                let channel_dim = Dimensions::new(0, channels)
+                    .with_next(Rc::new(RefCell::new(width_dim)));
+                let batch_dim = Dimensions::new(0, batch_size)
+                    .with_next(Rc::new(RefCell::new(channel_dim)));
+
+                // Now add prev pointers
+                let batch_dim = Self::add_prev_pointers(batch_dim);
+                                               
+                Box::new(batch_dim)
+            },
+        
+            ImageDataTensorShapeFormat::HWC => {
+                let channel_dim = Dimensions::new(channels, width);
+                let height_dim = Dimensions::new(0, height)
+                    .with_next(Rc::new(RefCell::new(channel_dim)));
+                let batch_dim = Dimensions::new(0, batch_size)
+                    .with_next(Rc::new(RefCell::new(height_dim)));
+
+                // Add prev pointers
+                let batch_dim = Self::add_prev_pointers(batch_dim);
+            
+                Box::new(batch_dim)
+            },
+        
+            _ => {
+                Box::new(Dimensions::new(width, height))
+            }
+        }
+    }
+    
+    // Simple version without prev pointers (your current approach)
+    pub fn create_input_pipeline_simple(&self, input_data_tensor_shape_format: ImageDataTensorShapeFormat) -> Box<Dimensions> {
+    
+        let batch_size = self.model_config.get_batch_size();
+        let channels = self.image_data_tensor_shape.get_channels();
+        let height = self.image_data_tensor_shape.get_height();
+        let width = self.image_data_tensor_shape.get_width();
+
+        match input_data_tensor_shape_format {
+            ImageDataTensorShapeFormat::CHW => {
+                let width_dim = Dimensions::new(width, height);
+                let channel_dim = Dimensions::new(0, channels)
+                    .with_next(Rc::new(RefCell::new(width_dim)));
+                let batch_dim = Dimensions::new(0, batch_size)
+                    .with_next(Rc::new(RefCell::new(channel_dim)));
+            
+                Box::new(batch_dim)
+            },
+        
+            ImageDataTensorShapeFormat::HWC => {
+                let channel_dim = Dimensions::new(channels, width);
+                let height_dim = Dimensions::new(0, height)
+                    .with_next(Rc::new(RefCell::new(channel_dim)));
+                let batch_dim = Dimensions::new(0, batch_size)
+                    .with_next(Rc::new(RefCell::new(height_dim)));
+            
+                Box::new(batch_dim)
+            },
+        
+            _ => {
+                Box::new(Dimensions::new(width, height))
+            }
         }
     }
 

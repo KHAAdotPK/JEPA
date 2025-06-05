@@ -5,15 +5,12 @@
 
 #![allow(non_snake_case)]
 
-#[path = "../lib/numrs/mod.rs"]
-mod numrs;
-
 use std::{cell::RefCell, fs::{File, metadata}, io::Read, io::Write, path::Path, rc::Rc, str};
 use argsv::{start, find_arg, stop, help, help_line, common_argc, process_argument};
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
 use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_uncompressed_png}; 
 
-use jepa::{Model, ModelConfig, ImageDataTensorShape, ImageDataTensorShapeFormat};
+use jepa::images::{Model, ModelConfig, ImageDataTensorShape, ImageDataTensorShapeFormat};
 
 fn main() {
 
@@ -97,6 +94,19 @@ fn main() {
                     drop(f); 
                     
                     let png = Png::new(buffer);
+
+                    match png.match_color_type_and_bit_depth(2, 8) {
+                                                
+                        false => {
+
+                            println!("Skipping file: {}, it has unsupported color type/bit depth combination.", path.display().to_string());
+                            continue; // Skip to next file in the loop    
+                        },
+                        _ => {
+
+                        }                        
+                    }
+
                     //let mut iter = png.chunks.iter();
 
                     let mut iter = png.get_chunks().iter();
@@ -261,12 +271,19 @@ fn main() {
                         //drop(boxed_dat); // Commented out because it is implicitly dropped when the scope ends
                     };
 
-                    let image_data_tensor = ImageDataTensorShape::new(0, 0, 3);
+                    let image_data_tensor = ImageDataTensorShape::new(3, 150, 28);
 
                     let model_config = ModelConfig::new(0.01, 19, 1);
 
                     let model = Model::new(model_config, image_data_tensor);
 
+                    let input_pipeline_dims: Box<Dimensions> = model.create_input_pipeline_with_prev(ImageDataTensorShapeFormat::HWC);
+
+                    println! ("Input pipeline dimensions: {:?}", input_pipeline_dims.get_n());
+
+                    let twins: Collective::<f64> = Collective::<f64>::new(None, Some(input_pipeline_dims));
+
+                    
                     model.start_training_loop(ImageDataTensorShapeFormat::CHW);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////                   
                 }

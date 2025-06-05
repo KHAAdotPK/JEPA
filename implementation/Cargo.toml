@@ -1,0 +1,9 @@
+# implementation/Cargo.toml (your jepa crate's Cargo.toml)
+[package]
+name = "jepa"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Assuming `numrs` is a sibling directory to `implementation`
+numrs = { path = "./../lib/numrs" }
