@@ -1,23 +1,13 @@
-[package]
-name = "JEPA" # JEPA for images
-version = "0.0.1"
-edition = "2021"
-build = "build.rs"
+# Cargo.toml (Of wrapper around JEPA for images implementation)
 
-#[workspace]
-#members = [    
-#    "lib/numrs/tests",    
-#]
+[package]
+name = "ijepa" # JEPA for images
+version = "0.1.0"
+edition = "2021"
 
 [dependencies]
 # Crates
+jepa = { path = "./implementation" } # Path to your jepa crate
+numrs = { path = "./lib/numrs" } # Path to your numrs crate
 argsv = { path = "./lib/argsv-rust/lib/rust/argsv/" }
 png = { path = "./lib/PNG-rust/lib/rust/png/" }
-
-[[bin]]
-name = "jepa"
-path = "src/main.rs"
-
-[lib]
-name = "jepa"
-path = "implementation/lib.rs"
