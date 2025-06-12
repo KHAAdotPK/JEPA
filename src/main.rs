@@ -58,19 +58,7 @@ fn main() {
                 suffix_token = Some(unsafe { str::from_utf8_unchecked(&args[unsafe{(*arg_suffix_clap).get_index_number() as usize} + 1].as_bytes()) });
              } 
         } 
-
-        /*match suffix_token {
-
-            Some (suffix) => {
-
-                println!("Suffix token: {}", suffix);
-            }
-            None => {
-
-                println!("No suffix token provided, using default.");
-            }
-        }*/
-
+        
     stop (head); 
            
     // for loop with range
@@ -90,29 +78,70 @@ fn main() {
         if path.exists() && path.extension().map_or(false, |ext| ext == "png") {
 
             println!("Processing PNG file: {}", arg);
-                   
+                               
             /*
-                The file will be closed once the scope of its owner ends. 
-                If you need it to live for less time, you can introduce a new scope where it will live.
-                If you need it to live for more time, you can move the ownership of the file to a new owner.
-            */
+             * The file will be closed automatically when `file` goes out of scope.
+             * If needed, you can limit its lifetime by introducing a new block scope.
+             */
             let file = File::open(&path);
             
             match file {
 
                 Err (why) => {
-        
-                    //panic!("Couldn't open {}: {}", path.display().to_string(), why);
-
+                            
+                    // Skip problematic files instead of panicking
                     println!("Skipping file: {}, couldn't open because of {}.", path.display().to_string(), why);
-                    continue; // Skip to next file in the loop
+                    continue;  // Move to the next file in the loop
                 }
                                         
                 Ok (mut f) => {
-                            
-                    let mut buffer = vec![0; metadata(arg).unwrap().len() as usize];
+                    
+                    /*
+                     * Reads the entire file into a pre-allocated buffer.
+                     * 
+                     * - Uses `path.metadata()`.
+                     * - Handles potential errors explicitly instead of unwrapping.
+                     * - Buffer size matches the file length (in bytes).
+                     */                    
+                    let file_size = match path.metadata() {
+                        Ok(meta) => meta.len() as usize,
+                        Err(e) => {
+                            println!("Failed to read metadata for {}: {}", path.display(), e);
+                           
+                            // About `drop()`:
+                            // - NOT NEEDED HERE because:
+                            //   1. `continue` automatically triggers Rust's destructors (including file closing)                            
+                            //   2. Rust's RAII guarantees cleanup when variables go out of scope
+                            //
+                            // When WOULD you need `drop()`?
+                            // - To force early release of resources (e.g., locks before blocking ops)
+                            // - When explicit cleanup timing matters (e.g., temp files)
+                            // - When breaking circular references (rare in Rust)
+
+                            continue; // Skip to next file
+                        }
+                    };
+                    
+                    let mut buffer = vec![0; file_size];
         
                     f.read (&mut buffer).unwrap();
+
+                    // Read file contents into the buffer
+                    if let Err(e) = f.read(&mut buffer) {
+                        println!("Failed to read file {}: {}", path.display(), e);
+
+                        // About `drop()`:
+                        // - NOT NEEDED HERE because:
+                        //   1. `continue` automatically triggers Rust's destructors (including file closing)                            
+                        //   2. Rust's RAII guarantees cleanup when variables go out of scope
+                        //
+                        // When WOULD you need `drop()`?
+                        // - To force early release of resources (e.g., locks before blocking ops)
+                        // - When explicit cleanup timing matters (e.g., temp files)
+                        // - When breaking circular references (rare in Rust)
+
+                        continue;
+                    }
         
                     /*    
                         The idiomatic way to control how long it's open is to use a scope { }.
@@ -154,16 +183,53 @@ fn main() {
 
                     //let all_idat_data_deflated: *mut DeflatedData = png.get_all_idat_data_as_DeflatedData();
 
-                    let all_idat_data: Vec<u8> = png.get_all_idat_data_as_vec();
-                    let dat: *mut InflatedData = png.get_inflated_data(&all_idat_data);
+                    /*
+                        Concatenate → Inflate
+                        PNG IDAT Chunks Are Fragments of a Single Zlib Stream
+                        The PNG spec treats all IDAT chunks as parts of one continuous compressed stream
+                        Concatenating them first is required for correct decompression
+                        (get_all_idat_data_as_vec() → get_inflated_data()) follows the standard.
+                     */
+                    let all_idat_data: Vec<u8> = png.get_all_idat_data_as_vec(); // Combine raw IDAT chunks
+                    let mut dat: *mut InflatedData = png.get_inflated_data(&all_idat_data); // Inflate the combined data all at once
 
-                    /* TESTING FOR RGB BEGINGS HERE */
+                    /*
+                        Modifying pixels after inflation  
+                    */
+                    dat = modify_png_pixel_data(dat, Vec::from([0xFF, 0x00, 0x00]), width, height, color_type, bit_depth);
 
-                        let dat_modify = modify_png_pixel_data(dat, Vec::from([0xFF, 0x00, 0x00]), width, height, color_type, bit_depth);
-                                                                   
-                    /* TESTING FOR TGB ENDS HERE */
+                    /*
+                        The Box now owns the memory pointed to by dat.
+                        The Box is a smart pointer that manages the memory of its contents.                        
+                        If boxed_dat goes out of scope without being passed further, Drop will free the memory
+                    */
+                    let mut boxed_dat: Box<DeflatedData>;
+                    unsafe { 
+                        boxed_dat = Box::from_raw(dat); 
 
-                    let deflated_data: *mut DeflatedData = png.get_deflated_data(dat_modify);
+                        // Just to show that the memory is managed by the Box and no dereferencing is needed to access the data
+                        //println!("Length of boxed_dat = {}", boxed_dat.len());
+
+                        /*
+                            Memory cleanup:
+                            If you're done with boxed_dat completely, you can drop it explicitly:
+                            drop(boxed_dat);
+                            This will automatically call the drop implementation for DeflatedData and deallocate the memory.
+                        */
+                        //drop(boxed_dat); // Commented out because it is implicitly dropped when the scope ends
+                    };
+                    
+                    /*
+                        Deflate the entire pixel data in one go. 
+                        Split the result into IDAT chunks (optional and not implemented yet, but some encoders do this for streaming).
+                    */
+                    //let deflated_data: *mut DeflatedData = png.get_deflated_data(dat);
+                    /*
+                        Ownership Transfer in get_deflated_data_new
+                        When you pass a Box<InflatedData> to get_deflated_data, ownership is transferred to the function.
+                        The Box and its contents will be dropped (freed) at the end of the function call, not at the end of main() or the outer scope.                        
+                     */
+                    let deflated_data: *mut DeflatedData = png.get_deflated_data_from_boxed_inflated_data (boxed_dat);
                                         
                     let output_path = path.with_extension("").with_extension(&format!("{}.png", suffix_token.unwrap()));
 
