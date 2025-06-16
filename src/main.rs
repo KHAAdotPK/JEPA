@@ -8,7 +8,7 @@
 use std::{cell::RefCell, fs::{File, metadata}, io::Read, io::Write, path::Path, path::PathBuf, rc::Rc, str};
 use argsv::{common_argc, find_arg, help, help_line, process_argument, start, stop, COMMANDLINES, PCLA};
 use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
-use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_uncompressed_png, modify_png_pixel_data}; 
+use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_png_from_deflated_data, create_png_from_boxed_defalted_data, modify_png_pixel_data};
 
 use jepa::images::{Model, ModelConfig, ImageDataTensorShape, ImageDataTensorShapeFormat};
 
@@ -199,6 +199,14 @@ fn main() {
                     dat = modify_png_pixel_data(dat, Vec::from([0xFF, 0x00, 0x00]), width, height, color_type, bit_depth);
 
                     /*
+                        This is the place where input pipeline gets created
+                     */
+                     //
+                    /*
+                        That special place ends here
+                     */ 
+
+                    /*
                         The Box now owns the memory pointed to by dat.
                         The Box is a smart pointer that manages the memory of its contents.                        
                         If boxed_dat goes out of scope without being passed further, Drop will free the memory
@@ -230,12 +238,31 @@ fn main() {
                         The Box and its contents will be dropped (freed) at the end of the function call, not at the end of main() or the outer scope.                        
                      */
                     let deflated_data: *mut DeflatedData = png.get_deflated_data_from_boxed_inflated_data (boxed_dat);
+
+                    let boxed_deflated_data: Box<DeflatedData>;
+                    unsafe {                        
+                        boxed_deflated_data = Box::from_raw(deflated_data);
+                    }
                                         
                     let output_path = path.with_extension("").with_extension(&format!("{}.png", suffix_token.unwrap()));
 
                     println!("Output PNG file will be: {}", output_path.display());
                     
-                    create_uncompressed_png(width, height, deflated_data as *mut InflatedData, &output_path);
+                    let png_from_boxed_deflated_data: Option<Png> = create_png_from_boxed_defalted_data(width, height, boxed_deflated_data, &output_path);
+
+                    match png_from_boxed_deflated_data {
+                        Some(png) => {
+
+                            png.traverse();
+
+                            println!("Saving PNG file: {}", output_path.display());
+                            png.save_to_file(&output_path);
+                            
+                        },
+                        None => {
+                            println!("Failed to create PNG from boxed deflated data");
+                        }
+                    }
                 }
             }
 
