@@ -60,6 +60,15 @@ fn main() {
         } 
         
     stop (head); 
+
+    /*
+        Instancite model composite here....
+     */
+        let image_data_tensor = ImageDataTensorShape::new(3 /* channels */, 344 /* height */, 254 /* width */);
+        let model_config = ModelConfig::new(0.01 /* learning rate */, 1 /* epochs */, 1 /* batch size */);
+    /*
+        Model instantiation ends here.
+     */ 
            
     // for loop with range
     for i in 1..ncommon {
@@ -193,6 +202,8 @@ fn main() {
                     let all_idat_data: Vec<u8> = png.get_all_idat_data_as_vec(); // Combine raw IDAT chunks
                     let mut dat: *mut InflatedData = png.get_inflated_data(&all_idat_data); // Inflate the combined data all at once
 
+                    let dat_without_filter_method_byte: *mut InflatedData = png.remove_filter_bytes_from_inflated_data(dat);
+
                     /*
                         Modifying pixels after inflation  
                     */
@@ -212,8 +223,10 @@ fn main() {
                         If boxed_dat goes out of scope without being passed further, Drop will free the memory
                     */
                     let mut boxed_dat: Box<DeflatedData>;
+                    let mut boxed_dat_without_filter_method_byte: Box<InflatedData>;
                     unsafe { 
                         boxed_dat = Box::from_raw(dat); 
+                        boxed_dat_without_filter_method_byte = Box::from_raw(dat_without_filter_method_byte);
 
                         // Just to show that the memory is managed by the Box and no dereferencing is needed to access the data
                         //println!("Length of boxed_dat = {}", boxed_dat.len());
