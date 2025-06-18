@@ -60,12 +60,19 @@ fn main() {
         } 
         
     stop (head); 
-
+    
     /*
         Instancite model composite here....
      */
         let image_data_tensor = ImageDataTensorShape::new(3 /* channels */, 344 /* height */, 254 /* width */);
-        let model_config = ModelConfig::new(0.01 /* learning rate */, 1 /* epochs */, 1 /* batch size */);
+        let model_config = ModelConfig::new(0.01 /* learning rate */, (ncommon - 1) as usize /* epochs */, 1 /* batch size */);
+        let model = Model::new(model_config, image_data_tensor);
+        let input_pipeline_dims: Box<Dimensions> = model.create_input_pipeline_with_prev(ImageDataTensorShapeFormat::HWC);
+        let mut input_pipeline: Collective<u8> = Collective::<u8>::from_shape(input_pipeline_dims);
+
+        input_pipeline[0] = 1.0 as u8; // Example of setting a value in the Collective
+
+        let mut counter: usize = 0;
     /*
         Model instantiation ends here.
      */ 
@@ -239,6 +246,19 @@ fn main() {
                         */
                         //drop(boxed_dat); // Commented out because it is implicitly dropped when the scope ends
                     };
+
+                    
+                    //boxed_dat_without_filter_method_byte.data[]
+
+                    unsafe {
+                        for i in 0..boxed_dat_without_filter_method_byte.len() {
+
+                            //println!("{}: {}", i, boxed_dat_without_filter_method_byte.data[i]);
+                            input_pipeline[counter] = *boxed_dat_without_filter_method_byte.data.add(i as usize) as u8; // Example of setting a value in the Collective
+
+                            counter += 1;
+                        }
+                    }   
                     
                     /*
                         Deflate the entire pixel data in one go. 
