@@ -575,7 +575,26 @@ impl Model {
     /// // Start training with CHW format (recommended for performance)
     /// model.start_training_loop(ImageDataTensorShapeFormat::CHW);
     /// ```    
-    pub fn start_training_loop(&self, image_data_tensor_shape_format: ImageDataTensorShapeFormat) {
+    pub fn start_training_loop<T>(&self, input_pipeline: &Collective<T>, image_data_tensor_shape_format: ImageDataTensorShapeFormat) 
+        where 
+            T: Default + Copy 
+    {
         
-    }
+        let model_config = self.get_ModelConfig();
+        let image_data_tensor_shape = self.get_ImageDataTensorShape();
+
+        model_config.get_epochs();
+        model_config.get_batch_size();
+        model_config.get_learning_rate();
+        image_data_tensor_shape.get_channels();
+        image_data_tensor_shape.get_height();
+        image_data_tensor_shape.get_width();
+
+        println! ("{}", image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width());
+        println! ("{}", model_config.get_batch_size());
+
+        let dims = Box::new(Dimensions::new(image_data_tensor_shape.get_width(), image_data_tensor_shape.get_height()));
+        
+        let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width(), image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width(), dims);
+    }   
 }

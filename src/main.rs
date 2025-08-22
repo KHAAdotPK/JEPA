@@ -19,11 +19,16 @@ fn main() {
                          t -t traverse --traverse /t (Traverses PNG file structure and displays it)\n\
                          d -d delete --delete /d (Deletes the named chunk from the PNG file)\n\
                          verbose --verbose (Displays detailed information or feedback about the execution of another command)\n\
-                         suffix --suffix (Suffix for the output PNG file)\n";
+                         suffix --suffix (Suffix for the output PNG file)\n\
+                         epoch --epoch (Number of epochs)\n\
+                         batch --batch (Batch size)\n\
+                         learning --learning (Learning rate)\n";
 
     let arg_suffix: *mut COMMANDLINES;
+    let arg_epoch: *mut COMMANDLINES;
 
-    let mut suffix_token: Option<&str> = Some(constants::PNG_OUTPUT_FILE_SUFFIX);                 
+    let mut suffix_token: Option<&str> = Some(constants::PNG_OUTPUT_FILE_SUFFIX);
+    let mut epochs_number: usize = 1;                  
 
     // Get the command-line arguments as an iterator
     let args: Vec<String> = std::env::args().collect();
@@ -57,22 +62,41 @@ fn main() {
 
                 suffix_token = Some(unsafe { str::from_utf8_unchecked(&args[unsafe{(*arg_suffix_clap).get_index_number() as usize} + 1].as_bytes()) });
              } 
-        } 
+        }
+        
+        arg_epoch = find_arg (head, command_lines, "--epoch");
+        if !arg_epoch.is_null() {
+            let arg_epoch_clap: *mut PCLA = unsafe {(*arg_epoch).get_clap()};
+            if unsafe{(*arg_epoch_clap).get_argc()} > 0 {
+                
+                //epochs_number = args[unsafe{(*arg_epoch_clap).get_index_number() as usize} + 1].parse::<usize>();
+
+                if let Ok(parsed_epochs) = args[unsafe{(*arg_epoch_clap).get_index_number() as usize} + 1].parse::<usize>() {
+
+                    epochs_number = parsed_epochs;                                        
+                } else {
+
+                    // Handle parsing error
+                    eprintln!("Invalid epoch value: {}, epochs default to {}", args[unsafe{(*arg_epoch_clap).get_index_number() as usize} + 1], epochs_number);
+                    // Set default or return error
+                }
+            }            
+        }
         
     stop (head); 
     
     /*
         Instancite model composite here....
      */
-        let image_data_tensor = ImageDataTensorShape::new(3 /* channels */, 344 /* height */, 254 /* width */);
-        let model_config = ModelConfig::new(0.01 /* learning rate */, (ncommon - 1) as usize /* epochs */, 1 /* batch size */);
-        let model = Model::new(model_config, image_data_tensor);
-        let input_pipeline_dims: Box<Dimensions> = model.create_input_pipeline_with_prev(ImageDataTensorShapeFormat::HWC);
-        let mut input_pipeline: Collective<u8> = Collective::<u8>::from_shape(input_pipeline_dims);
+    let image_data_tensor = ImageDataTensorShape::new(3 /* channels */, 344 /* height */, 254 /* width */);
+    let model_config = ModelConfig::new(0.01 /* learning rate */, (ncommon - 1) as usize  /* batch size */, epochs_number /* epochs */);
+    let model = Model::new(model_config, image_data_tensor);
+    let input_pipeline_dims: Box<Dimensions> = model.create_input_pipeline_with_prev(ImageDataTensorShapeFormat::HWC);
+    let mut input_pipeline: Collective<u8> = Collective::<u8>::from_shape(input_pipeline_dims);
+    
+    input_pipeline[0] = 1.0 as u8; // Example of setting a value in the Collective
 
-        input_pipeline[0] = 1.0 as u8; // Example of setting a value in the Collective
-
-        let mut counter: usize = 0;
+    let mut counter: usize = 0;
     /*
         Model instantiation ends here.
      */ 
@@ -138,9 +162,9 @@ fn main() {
                         }
                     };
                     
-                    let mut buffer = vec![0; file_size];
+                    let mut buffer = vec![0; file_size]; // Buffer to store file contents, buffer size matches the file size
         
-                    f.read (&mut buffer).unwrap();
+                    //f.read (&mut buffer).unwrap();
 
                     // Read file contents into the buffer
                     if let Err(e) = f.read(&mut buffer) {
@@ -165,7 +189,7 @@ fn main() {
                         There's one other way to manually close the file, using the drop() function. The drop() function does the exact same thing as what happens when the scope around the file closes. 
                      */
                     drop(f); 
-                    
+                                        
                     let png = Png::new(buffer);
 
                     match png.match_color_type_and_bit_depth(2, 8) {
@@ -250,6 +274,8 @@ fn main() {
                     
                     //boxed_dat_without_filter_method_byte.data[]
 
+                    println!{"Counter = {}", counter};
+
                     unsafe {
                         for i in 0..boxed_dat_without_filter_method_byte.len() {
 
@@ -302,6 +328,8 @@ fn main() {
         } else {
 
             println!("Invalid or non-existent PNG file: {}", arg);
-        }                    
+        }                
     }
+
+    model.start_training_loop::<u8> (&input_pipeline, ImageDataTensorShapeFormat::HWC);
 } 
