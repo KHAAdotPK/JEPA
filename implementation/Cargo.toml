@@ -5,5 +5,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Assuming `numrs` is a sibling directory to `implementation`
-numrs = { path = "./../lib/numrs" }
+# Assuming `Numrs` is a sibling directory to `implementation`
+Numrs = { path = "./../lib/Numrs" }

@@ -4,7 +4,7 @@
  */
  
 use std::{rc::Rc, cell::RefCell}; 
-use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};
+use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
 
 /// Configuration structure for machine learning model hyperparameters.
 /// 
@@ -596,5 +596,7 @@ impl Model {
         let dims = Box::new(Dimensions::new(image_data_tensor_shape.get_width(), image_data_tensor_shape.get_height()));
         
         let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width(), image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width(), dims);
+
+        
     }   
 }

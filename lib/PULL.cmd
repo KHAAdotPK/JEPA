@@ -1,4 +1,4 @@
-git clone https://github.com/KHAAdotPK/numrs.git
+git clone https://github.com/KHAAdotPK/Numrs.git
 git clone https://github.com/KHAAdotPK/argsv-rust.git
 git clone https://github.com/KHAAdotPK/PNG-rust.git
 git clone https://github.com/KHAAdotPK/allocator.git
