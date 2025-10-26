@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 # Crates
 jepa = { path = "./implementation" } # Path to your jepa crate
-numrs = { path = "./lib/numrs" } # Path to your numrs crate
+Numrs = { path = "./lib/Numrs" } # Path to your numrs crate
 argsv = { path = "./lib/argsv-rust/lib/rust/argsv/" }
 png = { path = "./lib/PNG-rust/lib/rust/png/" }

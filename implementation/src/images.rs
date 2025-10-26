@@ -595,8 +595,15 @@ impl Model {
 
         let dims = Box::new(Dimensions::new(image_data_tensor_shape.get_width(), image_data_tensor_shape.get_height()));
         
-        let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width(), image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width(), dims);
+        //let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width(), image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*2, dims);
 
-        
+        //println! ("{}", input_pipeline_slice.data.unwrap().len());
+
+        for i in 0..model_config.get_batch_size() {
+
+            let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*i, image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*(i+1), dims.clone());
+
+            println! ("{}", input_pipeline_slice.data.unwrap().len());
+        }
     }   
 }
