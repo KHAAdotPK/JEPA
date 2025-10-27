@@ -1,5 +1,8 @@
 ## JEPA (Joint Embedding Predictive Architecture) for Images
 
+### Project Overview
+Implementation of Image-based Joint Embedding Predictive Architecture (I-JEPA) - a self-supervised learning framework for visual representation learning. This project integrates custom-built components across multiple languages (Rust, C, C++) to create a complete training pipeline from image processing to model training.
+
 **JEPA** is a self-supervised learning framework proposed by ``Yann LeCun`` and his team at ``Meta AI``. Its key characteristics include:
 - **Purpose**: Learning representations from unlabeled data by predicting one part of the data from another part.
 - **Mechanism**: Uses two encoders (context and target) and a predictor network.
@@ -51,3 +54,7 @@ After executing the PULL.cmd script, the following dependencies will be cloned f
    - Repository: `https://github.com/KHAAdotPK/ala_exception.git`
    - Purpose: Custom exception management
 
+
+#### Input pipeline is working
+
+![alt text](./input-pipeline.png)
