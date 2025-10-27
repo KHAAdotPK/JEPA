@@ -1,0 +1,30 @@
+Width = 254, Height = 344 aspect ratio is 73.837209302325581395348837209302 = 254/344
+
+Total image area: 254 × 344 = 87,376 pixels
+
+Scale range: 0.15 to 0.2 (15% to 20% of image area)
+
+Aspect ratio range: 0.75 to 1.5 (width/height ratio)
+
+Number of context blocks: 4 per image
+Number of target blocks: 4 per image
+
+------
+
+Single block area:
+Minimum: 87,376 × 0.15 = 13,106 pixels
+Maximum: 87,376 × 0.20 = 17,475 pixels
+
+0.75H.H = 15000
+0.75H^2 = 15000
+H^2 = 15000/0.75
+2 log(H) = log (15000/0.75)
+log (H) = log(15000/0.75)/2
+
+So H = 141 and W with aspect ratio of 0.75 it will be 106 hence for image area of 14,946 pixels the block will be 106x141 
+
+Acceptable Compromise:
+- Some overlap within context blocks: OK
+- Some overlap within target blocks: OK
+
+That is because with 8 non-overlapping blocks the required image area will be 8x106x141 = 119568 > 87,376 so some overlap is inevitable...
