@@ -1,10 +1,11 @@
 /*
- * implementation/model.rs
+ * implementation/images.rs
  * Q@khaa.pk
  */
  
-use std::{rc::Rc, cell::RefCell}; 
+use std::{rc::Rc, cell::RefCell};
 use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
+use crate::sundry::random_whole_number;
 
 /// Configuration structure for machine learning model hyperparameters.
 /// 
@@ -590,8 +591,8 @@ impl Model {
         image_data_tensor_shape.get_height();
         image_data_tensor_shape.get_width();
 
-        println! ("{}", image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width());
-        println! ("{}", model_config.get_batch_size());
+        //println! ("{}", image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width());
+        //println! ("{}", model_config.get_batch_size());
 
         let dims = Box::new(Dimensions::new(image_data_tensor_shape.get_width(), image_data_tensor_shape.get_height()));
         
@@ -603,7 +604,11 @@ impl Model {
 
             let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*i, image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*(i+1), dims.clone());
 
-            println! ("{}", input_pipeline_slice.data.unwrap().len());
+            let random_number = random_whole_number(1, 8);
+
+            println! ("random number = {}", random_number); 
+
+            //println! ("{}", input_pipeline_slice.data.unwrap().len());
         }
     }   
 }

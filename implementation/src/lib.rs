@@ -8,6 +8,7 @@ use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};*/
 
 // JEPA framework for images 
 pub mod images;
+pub mod sundry;
 
 /*use images::ImageDataTensorShape;*/
 

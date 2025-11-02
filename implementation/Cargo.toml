@@ -7,3 +7,4 @@ edition = "2021"
 [dependencies]
 # Assuming `Numrs` is a sibling directory to `implementation`
 Numrs = { path = "./../lib/Numrs" }
+rand = "0.8"
