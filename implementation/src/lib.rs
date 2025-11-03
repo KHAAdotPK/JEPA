@@ -9,6 +9,7 @@ use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};*/
 // JEPA framework for images 
 pub mod images;
 pub mod sundry;
+pub mod constants;
 
 /*use images::ImageDataTensorShape;*/
 

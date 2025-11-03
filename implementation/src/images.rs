@@ -1,11 +1,11 @@
 /*
- * implementation/images.rs
+ * implementation/src/images.rs
  * Q@khaa.pk
  */
  
 use std::{rc::Rc, cell::RefCell};
+use crate::{sundry::random_whole_number, constants::{NUMBER_OF_CONTEXT_BLOCKS, NUMBER_OF_TARGET_BLOCKS}};
 use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
-use crate::sundry::random_whole_number;
 
 /// Configuration structure for machine learning model hyperparameters.
 /// 
@@ -579,10 +579,13 @@ impl Model {
     pub fn start_training_loop<T>(&self, input_pipeline: &Collective<T>, image_data_tensor_shape_format: ImageDataTensorShapeFormat) 
         where 
             T: Default + Copy 
-    {
-        
+    {        
         let model_config = self.get_ModelConfig();
         let image_data_tensor_shape = self.get_ImageDataTensorShape();
+
+        //let random_context_target_block_numbers: u8[NUMBER_OF_CONTEXT_BLOCKS + NUMBER_OF_TARGET_BLOCKS];
+
+        let mut random_context_target_block_numbers: Box<[u8]> = Box::new([0; NUMBER_OF_CONTEXT_BLOCKS + NUMBER_OF_TARGET_BLOCKS]);
 
         model_config.get_epochs();
         model_config.get_batch_size();
@@ -604,11 +607,40 @@ impl Model {
 
             let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*i, image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*(i+1), dims.clone());
 
-            let random_number = random_whole_number(1, 8);
+            let random_number: u8 = random_whole_number(1, random_context_target_block_numbers.len()) as u8;
 
             println! ("random number = {}", random_number); 
 
-            //println! ("{}", input_pipeline_slice.data.unwrap().len());
+            println!("len = {}", random_context_target_block_numbers.len());
+
+            for j in 0..random_context_target_block_numbers.len() {
+                let mut random_number: u8;
+    
+                loop {
+
+                    random_number = random_whole_number(1, random_context_target_block_numbers.len()) as u8;
+                    let mut is_duplicate = false;
+        
+                    // Check all previous elements
+                    for k in 0..j {
+                        if random_number == random_context_target_block_numbers[k] {
+                            is_duplicate = true;
+                            break;
+                        }
+                    }
+        
+                    if !is_duplicate {
+                        break;
+                    }
+                }
+    
+                random_context_target_block_numbers[j] = random_number;
+            }
+
+            for j in 0..random_context_target_block_numbers.len() {
+             
+                println! ("-> {}", random_context_target_block_numbers[j]);
+            }
         }
     }   
 }
