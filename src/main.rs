@@ -10,7 +10,9 @@ use argsv::{common_argc, find_arg, help, help_line, process_argument, start, sto
 use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
 use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_png_from_deflated_data, create_png_from_boxed_defalted_data, modify_png_pixel_data};
 
-use jepa::images::{Model, ModelConfig, ImageDataTensorShape, ImageDataTensorShapeFormat};
+use jepa::model::{Model, ModelConfig};
+use jepa::images::{ImageDataTensorShape, ImageDataTensorShapeFormat};
+
 
 fn main() {
 

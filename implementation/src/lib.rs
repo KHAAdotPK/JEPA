@@ -10,6 +10,7 @@ use numrs::{dimensions::Dimensions, collective::Collective, num::Numrs};*/
 pub mod images;
 pub mod sundry;
 pub mod constants;
+pub mod model;
 
 /*use images::ImageDataTensorShape;*/
 
