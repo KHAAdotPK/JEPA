@@ -4,9 +4,102 @@
  */
  
 use std::{rc::Rc, cell::RefCell};
+use crate::constants::{JEPA_NUMBER_OF_CONTEXT_BLOCKS, JEPA_NUMBER_OF_TARGET_BLOCKS, JEPA_IMAGES_ASPECT_RATIO};
 //use crate::{sundry::random_whole_number, constants::{NUMBER_OF_CONTEXT_BLOCKS, NUMBER_OF_TARGET_BLOCKS}};
 //use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
 
+/// Calculates the height of an image block based on input dimensions and JEPA configuration.
+///
+/// This macro computes the height of individual image blocks by:
+/// 1. Calculating total pixels per image: `input_len / channels`
+/// 2. Dividing by total blocks (context + target) to get pixels per block
+/// 3. Adjusting for aspect ratio to distribute pixels between height and width
+/// 4. Taking the square root to convert from area to linear dimension
+///
+/// # Arguments
+/// * `$input_len` - Total length of input data (number of elements)
+/// * `$channels` - Number of color channels in the image
+///
+/// # Returns
+/// * `f64` - Calculated height of each image block
+///
+/// # Formula
+/// `sqrt( (total_pixels / total_blocks) / aspect_ratio )`
+///
+/// # Example
+/// ```
+/// let height = image_block_height!(1200, 3);
+/// ```
+// Macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+#[macro_export]
+macro_rules! image_block_height {
+
+    ($input_len: expr, $channels: expr) => {
+                
+        (($input_len/$channels) as f64/((JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt() as f64
+    };
+}
+
+/// Calculates the width of an image block based on input dimensions and JEPA configuration.
+///
+/// This macro computes the width of individual image blocks by:
+/// 1. Calculating total pixels per image: `input_len / channels`
+/// 2. Dividing by total blocks (context + target) to get pixels per block
+/// 3. Adjusting for aspect ratio to distribute pixels between height and width
+/// 4. Taking the square root to convert from area to linear dimension
+///
+/// # Arguments
+/// * `$input_len` - Total length of input data (number of elements)
+/// * `$channels` - Number of color channels in the image
+///
+/// # Returns
+/// * `f64` - Calculated width of each image block
+///
+/// # Formula
+/// `sqrt( (total_pixels / total_blocks) / aspect_ratio ) * aspect_ratio`
+///
+/// # Example
+/// ```
+/// let width = image_block_width!(1200, 3);
+/// ```
+// Macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+#[macro_export]
+macro_rules! image_block_width {
+
+    ($input_len: expr, $channels: expr) => {
+                
+        (($input_len/$channels) as f64/((JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt() as f64 * JEPA_IMAGES_ASPECT_RATIO
+    };
+}
+
+/// Calculates the size of an image block based on input dimensions and JEPA configuration.
+///
+/// This macro computes the size of individual image blocks by:
+/// 1. Calculating total pixels per image: `input_len / channels`
+/// 2. Dividing by total blocks (context + target) to get pixels per block
+///
+/// # Arguments
+/// * `$input_len` - Total length of input data (number of elements)
+/// * `$channels` - Number of color channels in the image
+///
+/// # Returns
+/// * `usize` - Calculated size of each image block
+///
+/// # Example
+/// ```
+/// let size = image_block_size!(1200, 3);
+/// ```
+// Macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+#[macro_export]
+macro_rules! image_block_size {
+
+    ($input_len: expr, $channels: expr) => {
+                        
+        ($input_len/$channels)/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)
+    };
+}
+
+// (((input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt()
 
 // Flexibility to handle both formats if needed
 /// Enumeration defining supported tensor data layout formats for image processing.
@@ -138,4 +231,41 @@ impl ImageDataTensorShape {
         self.channels
     }
 }
+
+// The context/target block
+pub struct ImageBlock {
+    
+    height: f64,
+    width: f64,
+    size: usize    
+}
+
+impl ImageBlock {
+
+    pub fn new(height: f64, width: f64, size: usize) -> ImageBlock {
+
+        ImageBlock {
+
+            height: height,
+            width: width,
+            size: size,            
+        }        
+    }
+
+    pub fn get_height(&self) -> f64 {
+
+        self.height
+    }
+
+    pub fn get_width(&self) -> f64 {
+
+        self.width
+    }
+
+    pub fn get_size(&self) -> usize {
+
+        self.size
+    }
+}
+
 
