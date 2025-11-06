@@ -4,7 +4,7 @@
  */
  
 use std::{rc::Rc, cell::RefCell};
-use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
+use Numrs::{header::Axis, dimensions::Dimensions, collective::Collective, num::Tensor};
 use crate::{image_block_height, image_block_width, image_block_size, sundry::random_whole_number, constants::{JEPA_NUMBER_OF_CONTEXT_BLOCKS, JEPA_NUMBER_OF_TARGET_BLOCKS, JEPA_IMAGES_ASPECT_RATIO}, images::{ImageDataTensorShape, ImageDataTensorShapeFormat, ImageBlock}};
 
 /// Configuration structure for machine learning model hyperparameters.
@@ -465,7 +465,7 @@ impl Model {
         //println! ("{}", image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width());
         //println! ("{}", model_config.get_batch_size());
 
-        let dims = Box::new(Dimensions::new(image_data_tensor_shape.get_width(), image_data_tensor_shape.get_height()));
+        let dims_image = Box::new(Dimensions::new(image_data_tensor_shape.get_width(), image_data_tensor_shape.get_height()));
         
         //let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width(), image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*2, dims);
 
@@ -474,13 +474,26 @@ impl Model {
         for i in 0..model_config.get_batch_size() {
 
             // Automatically dropped at end of each loop iteration            
-            let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*i, image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*(i+1), dims.clone());
+            let input_pipeline_slice: Box<Collective<T>> = input_pipeline.get_slice(image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*i, image_data_tensor_shape.get_channels()*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*(i+1), dims_image.clone(), Axis::None);
 
             /*let random_number: u8 = random_whole_number(1, random_context_target_block_numbers.len()) as u8;
 
             println! ("random number = {}", random_number); 
 
             println!("len = {}", random_context_target_block_numbers.len());*/
+
+            //input_pipeline_slice.get_slice(0, 10, dims.clone());
+
+            //let image_block = ImageBlock::new(image_data_tensor_shape.get_height() as f64, image_data_tensor_shape.get_width() as f64, (input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/8);
+
+            let image_block = ImageBlock::new (
+                image_block_height! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()), image_block_width! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()), image_block_size! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()));
+
+            println! ("Height = {}", image_block_height! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()));
+
+            println! ("Width =  {}", image_block_width! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()));
+
+            println! ("{}, {}, {}", image_block.get_height(), image_block.get_width(), image_block.get_size());
 
             for j in 0..random_context_target_block_numbers.len() {
                 let mut random_number: u8;
@@ -514,25 +527,13 @@ impl Model {
             // Now we have the random context and target block numbers
             // We can use them to create the context and target encoders
             
-            println!("-> {}", (input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels()));
-            println!("-> {}", ((input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/8) as f64);
+            //println!("-> {}", (input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels()));
+            //println!("-> {}", ((input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/8) as f64);
 
-            let image_block = ImageBlock::new(image_data_tensor_shape.get_height() as f64, image_data_tensor_shape.get_width() as f64, (input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/8);
+            //let image_block = ImageBlock::new(image_data_tensor_shape.get_height() as f64, image_data_tensor_shape.get_width() as f64, (input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/8);
 
-            println! ("-> H = {}", (((input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt());
-            println! ("-> W = {}", (((input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt() * JEPA_IMAGES_ASPECT_RATIO);
-
-            let image_block = ImageBlock::new (
-                image_block_height! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()), 
-                image_block_width! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()), 
-                image_block_size! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()),
-                /*input_pipeline_slice.data.as_ref().unwrap().len()/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS))*/);
-
-            println! ("Height = {}", image_block_height! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()));
-
-            println! ("Width =  {}", image_block_width! (input_pipeline_slice.data.as_ref().unwrap().len(), image_data_tensor_shape.get_channels()));
-
-            println! ("{}, {}, {}", image_block.get_height(), image_block.get_width(), image_block.get_size());
+            //println! ("-> H = {}", (((input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt());
+            //println! ("-> W = {}", (((input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt() * JEPA_IMAGES_ASPECT_RATIO);            
         }
     }    
 }
