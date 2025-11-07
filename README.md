@@ -10,6 +10,12 @@ Implementation of Image-based Joint Embedding Predictive Architecture (I-JEPA) -
 - **Focus**: Primarily focused on representation learning rather than complete world modeling.
 - **Applications**: Computer vision, speech recognition, and other perceptual tasks.
 
+### Documentation
+| Document | Description |
+|----------|-------------|
+| `DOCUMENTS/input-pipeline.md` | Input pipeline documentation |
+
+
 ### Dependencies and easy dependency installation
 
 The project includes a convenient script for fetching all dependencies in one go:
