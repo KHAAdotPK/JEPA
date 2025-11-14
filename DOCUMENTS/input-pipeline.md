@@ -1,9 +1,12 @@
 ```C++
     JEPA/DOCUMENTS/input-pipeline.md
-    Q@khaa.pk
+    Written by, Sohail Qayum Malik
 ```
+> **Note to Readers:** This document is a work in progress, part of an ongoing series on a custom C++ transformer implementation. It extends the concepts introduced in Chapter 1, focusing on multi-head attention. Expect minor typos or formatting issues, which will be refined in future revisions. Thank you for your patience.
 
-# I-JEPA Input Pipeline Documentation
+`"Readers should be aware that this article represents an ongoing project. The information and code contained herein are preliminary and will be expanded upon in future revisions."`
+
+# I-JEPA Input Pipeline Documentation  
 
 ## Overview
 This document describes the custom input pipeline for an Image-based Joint-Embedding Predictive Architecture (I-JEPA) implementation in Rust. The pipeline features a unique approach to PNG processing using a custom library rather than standard image decoding utilities.
