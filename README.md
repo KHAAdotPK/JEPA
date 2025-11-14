@@ -13,7 +13,8 @@ Implementation of Image-based Joint Embedding Predictive Architecture (I-JEPA) -
 ### Documentation
 | Document | Description |
 |----------|-------------|
-| `DOCUMENTS/input-pipeline.md` | Input pipeline documentation |
+| `DOCUMENTS/input-pipeline.md` 		   | Input pipeline documentation |
+| `DOCUMENTS/dividing-single-image-into-blocks.md` | Input pipeline documentation |
 
 
 ### Dependencies and easy dependency installation
