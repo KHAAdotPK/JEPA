@@ -84,10 +84,10 @@ Blocks are sampled **without replacement** and **without spatial overlap**.
   - `r = JEPA_IMAGES_ASPECT_RATIO`
 
 - **Target area per block**:  
-  $$ a = \frac{A}{N} $$
+  $$a = \frac{A}{N}$$
 
 - **Block dimensions (floating-point)**:  
-  $$ h = \sqrt{\frac{a}{r}},\quad w = r \times h $$
+  $$h = \sqrt{\frac{a}{r}},\quad w = r \times h$$
 
   → Both `w` and `h` are **`f64`** and **preserve fractional precision**
 
