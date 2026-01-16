@@ -8,10 +8,12 @@
 use std::{cell::RefCell, fs::{File, metadata}, io::Read, io::Write, path::Path, path::PathBuf, rc::Rc, str};
 use argsv::{common_argc, find_arg, help, help_line, process_argument, start, stop, COMMANDLINES, PCLA};
 use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
-use png::{constants, Png, Chunk, DeflatedData, InflatedData, create_png_from_deflated_data, create_png_from_boxed_defalted_data, modify_png_pixel_data};
+use png::{constants::{PNG_IHDR_CHUNK, PNG_OUTPUT_FILE_SUFFIX}, png_core::Png, png_core::Chunk, png_core::DeflatedData, png_core::InflatedData, png_core::create_png_from_deflated_data, png_core::create_png_from_boxed_defalted_data, png_core::modify_png_pixel_data, images::{ImageDataTensorShape, ImageDataTensorShapeFormat, ImageBlock}};
 
 use jepa::model::{Model, ModelConfig};
-use jepa::images::{ImageDataTensorShape, ImageDataTensorShapeFormat};
+use jepa::constants::{JEPA_IMAGE_HEIGHT, JEPA_IMAGE_WIDTH, JEPA_IMAGE_CHANNELS, JEPA_IMAGE_COLOR_TYPE, JEPA_IMAGE_BIT_DEPTH};
+
+//use jepa::images::{/*ImageDataTensorShape*//*, ImageDataTensorShapeFormat*/};
 
 
 fn main() {
@@ -29,7 +31,7 @@ fn main() {
     let arg_suffix: *mut COMMANDLINES;
     let arg_epoch: *mut COMMANDLINES;
 
-    let mut suffix_token: Option<&str> = Some(constants::PNG_OUTPUT_FILE_SUFFIX);
+    let mut suffix_token: Option<&str> = Some(PNG_OUTPUT_FILE_SUFFIX);
     let mut epochs_number: usize = 1;                  
 
     // Get the command-line arguments as an iterator
@@ -90,7 +92,7 @@ fn main() {
     /*
         Instancite model composite here....
      */
-    let image_data_tensor = ImageDataTensorShape::new(3 /* channels */, 344 /* height */, 254 /* width */);
+    let image_data_tensor = ImageDataTensorShape::new(JEPA_IMAGE_CHANNELS, JEPA_IMAGE_HEIGHT, JEPA_IMAGE_WIDTH);
     let model_config = ModelConfig::new(0.01 /* learning rate */, (ncommon - 1) as usize  /* batch size */, epochs_number /* epochs */);
     let model = Model::new(model_config, image_data_tensor);
     let input_pipeline_dims: Box<Dimensions> = model.create_input_pipeline_with_prev(ImageDataTensorShapeFormat::HWC);
@@ -107,7 +109,7 @@ fn main() {
     for i in 1..ncommon {
 
         let arg = &args[i as usize];
-
+        
         let path: &Path = Path::new(arg);
 
         let mut height: u32 = 0;
@@ -133,6 +135,7 @@ fn main() {
                             
                     // Skip problematic files instead of panicking
                     println!("Skipping file: {}, couldn't open because of {}.", path.display().to_string(), why);
+
                     continue;  // Move to the next file in the loop
                 }
                                         
@@ -148,6 +151,7 @@ fn main() {
                     let file_size = match path.metadata() {
                         Ok(meta) => meta.len() as usize,
                         Err(e) => {
+
                             println!("Failed to read metadata for {}: {}", path.display(), e);
                            
                             // About `drop()`:
@@ -170,6 +174,7 @@ fn main() {
 
                     // Read file contents into the buffer
                     if let Err(e) = f.read(&mut buffer) {
+
                         println!("Failed to read file {}: {}", path.display(), e);
 
                         // About `drop()`:
@@ -194,11 +199,12 @@ fn main() {
                                         
                     let png = Png::new(buffer);
 
-                    match png.match_color_type_and_bit_depth(2, 8) {
+                    match png.match_color_type_and_bit_depth(JEPA_IMAGE_COLOR_TYPE, JEPA_IMAGE_BIT_DEPTH) {
                                                 
                         false => {
 
                             println!("Skipping file: {}, it has unsupported color type/bit depth combination.", path.display().to_string());
+
                             continue; // Skip to next file in the loop    
                         },
                         _ => {
@@ -206,7 +212,7 @@ fn main() {
                         }                        
                     }
 
-                    let chunk: Option<&Chunk> = png.get_chunk_by_type("IHDR");
+                    let chunk: Option<&Chunk> = png.get_chunk_by_type(PNG_IHDR_CHUNK);
 
                     match chunk {
 
@@ -223,7 +229,7 @@ fn main() {
                         }
                     }
 
-                    //let all_idat_data_deflated: *mut DeflatedData = png.get_all_idat_data_as_DeflatedData();
+                    // let all_idat_data_deflated: *mut DeflatedData = png.get_all_idat_data_as_DeflatedData();
 
                     /*
                         Concatenate → Inflate
@@ -240,7 +246,7 @@ fn main() {
                     /*
                         Modifying pixels after inflation  
                     */
-                    dat = modify_png_pixel_data(dat, Vec::from([0xFF, 0x00, 0x00]), width, height, color_type, bit_depth);
+                    dat = modify_png_pixel_data(dat, Vec::from([0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF]), width, height, color_type, bit_depth);
 
                     /*
                         This is the place where input pipeline gets created

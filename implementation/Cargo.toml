@@ -7,4 +7,5 @@ edition = "2021"
 [dependencies]
 # Assuming `Numrs` is a sibling directory to `implementation`
 Numrs = { path = "./../lib/Numrs" }
+png = { path = "./../lib/PNG-rust/lib/rust/png/" }
 rand = "0.8"

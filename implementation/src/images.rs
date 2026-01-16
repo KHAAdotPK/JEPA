@@ -4,9 +4,68 @@
  */
  
 use std::{rc::Rc, cell::RefCell};
-use crate::constants::{JEPA_NUMBER_OF_CONTEXT_BLOCKS, JEPA_NUMBER_OF_TARGET_BLOCKS, JEPA_IMAGES_ASPECT_RATIO};
+//use crate::constants::{JEPA_NUMBER_OF_CONTEXT_BLOCKS, JEPA_NUMBER_OF_TARGET_BLOCKS, JEPA_IMAGES_ASPECT_RATIO};
 //use crate::{sundry::random_whole_number, constants::{NUMBER_OF_CONTEXT_BLOCKS, NUMBER_OF_TARGET_BLOCKS}};
 //use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
+
+// (image_data_tensor_shape.get_channels() as f64)*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*(i as f64),
+/*#[macro_export]
+macro_rules! input_pipeline_slice_start {
+    ($image_slice_height: expr, $image_slice_width: expr, $image_channels: expr, $image_number: expr) => {
+
+        (($image_channels as f64)*$image_slice_height*$image_slice_width*($image_number as f64))
+    }
+}*/
+
+// (image_data_tensor_shape.get_channels() as f64)*image_data_tensor_shape.get_height()*image_data_tensor_shape.get_width()*((i + 1) as f64),
+/*#[macro_export]
+macro_rules! input_pipeline_slice_end {
+    ($image_slice_height: expr, $image_slice_width: expr, $image_channels: expr, $image_number: expr) => {
+
+        (($image_channels as f64)*$image_slice_height*$image_slice_width*((($image_number + 1) as f64)))
+    }
+}*/
+
+// Macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
+// ((random_context_target_block_numbers[j] - 1) as f64)*image_block.get_width()*(image_data_tensor_shape.get_channels() as f64)
+// ((($block_number - 1) as f64)*$image_block_width*($image_channels as f64)) 
+/*#[macro_export]
+macro_rules! image_block_slice_start {
+
+    ($block_number: expr, $image_block_width: expr, $image_channels: expr) => {
+        
+        ((($block_number - 1) as usize)*($image_block_width as usize)*($image_channels as usize)) as f64
+    };    
+}*/
+
+/*#[macro_export]
+macro_rules! image_block_slice_start_vertical {
+
+    ($block_number: expr, $image_block_width: expr, $image_channels: expr) => {
+        
+        ((($block_number - 1) as usize)*($image_block_width as usize)*($image_channels as usize)) as f64
+    };    
+}*/
+
+// (random_context_target_block_numbers[j] as f64)*image_block.get_width()*(image_data_tensor_shape.get_channels() as f64)
+// (($block_number as f64)*$image_block_width*($image_channels as f64)) - 1.0
+/*#[macro_export]
+macro_rules! image_block_slice_end {
+
+    ($block_number: expr, $image_block_width: expr, $image_channels: expr) => {
+
+        ((($block_number as usize)*($image_block_width as usize)*($image_channels as usize)) - 0) as f64
+    };    
+}*/
+
+/*#[macro_export]
+macro_rules! image_block_slice_end_vertical {
+
+    ($block_number: expr, $image_block_width: expr, $image_channels: expr) => {
+
+        ((($block_number as usize)*($image_block_width as usize)*($image_channels as usize)) - 0) as f64
+    };    
+}*/
 
 /// Calculates the height of an image block based on input dimensions and JEPA configuration.
 ///
@@ -31,14 +90,32 @@ use crate::constants::{JEPA_NUMBER_OF_CONTEXT_BLOCKS, JEPA_NUMBER_OF_TARGET_BLOC
 /// let height = image_block_height!(1200, 3);
 /// ```
 // Macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
-#[macro_export]
+/*#[macro_export]
 macro_rules! image_block_height {
 
     ($input_len: expr, $channels: expr) => {
                 
         (($input_len/$channels) as f64/((JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt() as f64
     };
+}*/
+
+/*#[macro_export]
+macro_rules! image_block_width_vertical {
+
+    ($image_tensor: expr) => {
+
+        $image_tensor.get_width() / ((JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS) as f64)
+    }
 }
+
+#[macro_export]
+macro_rules! image_block_height_vertical {
+
+    ($image_tensor: expr) => {
+
+        $image_tensor.get_height() 
+    }
+}*/
 
 /// Calculates the width of an image block based on input dimensions and JEPA configuration.
 ///
@@ -63,14 +140,14 @@ macro_rules! image_block_height {
 /// let width = image_block_width!(1200, 3);
 /// ```
 // Macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
-#[macro_export]
+/*#[macro_export]
 macro_rules! image_block_width {
 
     ($input_len: expr, $channels: expr) => {
                 
         (($input_len/$channels) as f64/((JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt() as f64 * JEPA_IMAGES_ASPECT_RATIO
     };
-}
+}*/
 
 /// Calculates the size of an image block based on input dimensions and JEPA configuration.
 ///
@@ -90,18 +167,27 @@ macro_rules! image_block_width {
 /// let size = image_block_size!(1200, 3);
 /// ```
 // Macro annotated with `#[macro_export]` will be exported at the root of the crate instead of the module where it is defined
-#[macro_export]
+/*#[macro_export]
 macro_rules! image_block_size {
 
     ($input_len: expr, $channels: expr) => {
                         
         ($input_len/$channels)/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)
     };
-}
+}*/
+
+/*#[macro_export]
+macro_rules! image_block_size_vertical {
+
+    ($image_tensor: expr) => {
+                        
+        image_block_width_vertical!($image_tensor) * image_block_height_vertical!($image_tensor)
+    };
+}*/
 
 // (((input_pipeline_slice.data.as_ref().unwrap().len()/image_data_tensor_shape.get_channels())/(JEPA_NUMBER_OF_CONTEXT_BLOCKS + JEPA_NUMBER_OF_TARGET_BLOCKS)) as f64 / JEPA_IMAGES_ASPECT_RATIO).sqrt()
 
-// Flexibility to handle both formats if needed
+/// Flexibility to handle both formats if needed
 /// Enumeration defining supported tensor data layout formats for image processing.
 /// 
 /// This enum provides flexibility in handling different tensor memory layouts that may be
@@ -147,11 +233,11 @@ macro_rules! image_block_size {
 /// The format parameter allows the training loop to adapt its data preprocessing
 /// and tensor operations based on the input format, ensuring optimal performance
 /// regardless of the source data layout.
-#[derive(PartialEq)]
+/*#[derive(PartialEq)]
 pub enum ImageDataTensorShapeFormat {
     CHW,  // The primary choice
     HWC,  // For interfacing with certain image libraries
-} 
+}*/ 
 
 /*
     Tensor Shape Decision for JEPA
@@ -185,13 +271,13 @@ pub enum ImageDataTensorShapeFormat {
 /// // Grayscale image of 28x28 pixels (like MNIST)
 /// let mnist_shape = ImageDataTensorShape::new(1, 28, 28);
 /// ```
-#[derive(Debug, Clone, Copy)]
+/*#[derive(Debug, Clone, Copy)]
 pub struct ImageDataTensorShape {
 
     channels: usize,
-    height: usize,
-    width: usize,    
-}
+    height: f64,
+    width: f64,    
+}*/
 
 /// Implementation block for ImageDataTensorShape providing constructor and accessor methods.
 /// 
@@ -204,9 +290,9 @@ pub struct ImageDataTensorShape {
 /// * `get_height()` - Returns the height dimension of the image tensor
 /// * `get_width()` - Returns the width dimension of the image tensor
 /// * `get_channels()` - Returns the number of channels in the image tensor
-impl ImageDataTensorShape {
+/*impl ImageDataTensorShape {
 
-    pub fn new(channels: usize, height: usize, width: usize) -> ImageDataTensorShape {
+    pub fn new(channels: usize, height: f64, width: f64) -> ImageDataTensorShape {
 
         ImageDataTensorShape {
 
@@ -216,12 +302,12 @@ impl ImageDataTensorShape {
         }
     }
 
-    pub fn get_height(&self) -> usize {
+    pub fn get_height(&self) -> f64 {
 
         self.height
     }
 
-    pub fn get_width(&self) -> usize {
+    pub fn get_width(&self) -> f64 {
 
         self.width
     }
@@ -264,8 +350,11 @@ impl ImageBlock {
 
     pub fn get_size(&self) -> usize {
 
-        self.size
+        //self.size
+        //((self.get_width() *self.get_height()) as usize)
+
+        (self.get_width() as usize)*(self.get_height() as usize)
     }
-}
+}*/
 
 
