@@ -625,14 +625,44 @@ impl Model {
              *   Remaining pixels: 10px -> Add 1 partial block
              *   Total blocks: 4
              */
-            let mut number_of_blocks_per_line =
-                ((dims_image.get_width()) / (dims_image_block.get_width()));
+            let mut number_of_blocks_per_line: f64 =
+                dims_image.get_width() / dims_image_block.get_width();
 
             let mut non_overlapping_pixels_per_line =
-                number_of_blocks_per_line * dims_image_block.get_width();
+                dims_image.get_width() - number_of_blocks_per_line * dims_image_block.get_width();
 
             if non_overlapping_pixels_per_line > 0.0 {
                 number_of_blocks_per_line += 1.0;
+            }
+
+            /*
+             * CALCULATE NUMBER OF BLOCKS REQUIRED TO COVER IMAGE HEIGHT
+             *
+             * This section computes how many blocks of fixed height are needed to span
+             * the entire height of the image, accounting for potential partial coverage
+             * at the image boundary.
+             *
+             * Steps:
+             * 1. Compute base number of complete blocks that fit within image height
+             * 2. Calculate total pixels covered by these complete blocks
+             * 3. If complete blocks don't fully cover the image height (i.e., there are
+             *    remaining pixels), add an additional partial block to cover them
+             *
+             * Example:
+             *   Image height: 100px, Block height: 30px
+             *   Base blocks: 100/30 = 3 (floor division)
+             *   Covered pixels: 3 * 30 = 90px
+             *   Remaining pixels: 10px -> Add 1 partial block
+             *   Total blocks: 4
+             */
+            let mut number_of_blocks_per_column: f64 =
+                dims_image.get_height() / dims_image_block.get_height();
+
+            let mut non_overlapping_pixels_per_column = dims_image.get_height()
+                - number_of_blocks_per_column * dims_image_block.get_height();
+
+            if non_overlapping_pixels_per_column > 0.0 {
+                number_of_blocks_per_column += 1.0;
             }
 
             block_file_names.clear();
@@ -694,9 +724,9 @@ impl Model {
                     image_block_slice_start_vertical_experimental!(
                         random_context_target_block_numbers[j],
                         image_data_tensor_shape.get_channels(),
-                        &dims_image,
+                        number_of_blocks_per_line,
                         &dims_image_block
-                    ) as f64,
+                    ),
                     image_block_slice_end!(
                         random_context_target_block_numbers[j],
                         image_block.get_width(),
