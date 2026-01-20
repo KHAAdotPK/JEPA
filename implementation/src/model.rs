@@ -14,7 +14,8 @@ use crate::{
 };
 use png::{
     constants::{PNG_FILE_EXTENSION, PNG_OUTPUT_FILE_SUFFIX},
-    image_block_height, image_block_size, image_block_slice_end, image_block_slice_start,
+    image_block_height, image_block_size, image_block_slice_end,
+    image_block_slice_end_vertical_experimental, image_block_slice_start,
     image_block_slice_start_experimental, image_block_slice_start_vertical,
     image_block_slice_start_vertical_experimental, image_block_width,
     images::{ImageBlock, ImageDataTensorShape, ImageDataTensorShapeFormat},
@@ -628,10 +629,12 @@ impl Model {
             let mut number_of_blocks_per_line: f64 =
                 dims_image.get_width() / dims_image_block.get_width();
 
-            let mut non_overlapping_pixels_per_line =
-                dims_image.get_width() - number_of_blocks_per_line * dims_image_block.get_width();
+            let mut overlapping_pixels_per_line = dims_image.get_width()
+                - number_of_blocks_per_line.floor() * dims_image_block.get_width();
 
-            if non_overlapping_pixels_per_line > 0.0 {
+            if overlapping_pixels_per_line > 0.0 {
+                number_of_blocks_per_line = number_of_blocks_per_line.floor();
+
                 number_of_blocks_per_line += 1.0;
             }
 
@@ -658,11 +661,11 @@ impl Model {
             let mut number_of_blocks_per_column: f64 =
                 dims_image.get_height() / dims_image_block.get_height();
 
-            let mut non_overlapping_pixels_per_column = dims_image.get_height()
-                - number_of_blocks_per_column * dims_image_block.get_height();
+            let mut overlapping_pixels_per_column = dims_image.get_height()
+                - number_of_blocks_per_column.floor() * dims_image_block.get_height();
 
-            if non_overlapping_pixels_per_column > 0.0 {
-                number_of_blocks_per_column += 1.0;
+            if overlapping_pixels_per_column > 0.0 {
+                number_of_blocks_per_column = number_of_blocks_per_column.floor() + 1.0;
             }
 
             block_file_names.clear();
@@ -720,11 +723,22 @@ impl Model {
                     "($image_dims.get_width() / ($block_dims.get_width())) as usize = {}",
                     ((dims_image.get_width()) / (dims_image_block.get_width())) as usize
                 );
+
+                println!(
+                    "Over Lapping Pixels Per Column = {}",
+                    overlapping_pixels_per_column
+                );
+
+                println!(
+                    "Number of block per column = {}",
+                    number_of_blocks_per_column
+                );
+
                 input_pipeline_slice.get_slice(
                     image_block_slice_start_vertical_experimental!(
                         random_context_target_block_numbers[j],
-                        image_data_tensor_shape.get_channels(),
                         number_of_blocks_per_line,
+                        overlapping_pixels_per_column,
                         &dims_image_block
                     ),
                     image_block_slice_end!(
@@ -734,6 +748,16 @@ impl Model {
                     ),
                     &dims_image_block,
                     Axis::Rows,
+                );
+
+                println!(
+                    "IMAGE BLOCK SLICE_END_VERTICAL = {}",
+                    image_block_slice_end_vertical_experimental!(
+                        random_context_target_block_numbers[j],
+                        number_of_blocks_per_line,
+                        overlapping_pixels_per_column,
+                        &dims_image_block
+                    )
                 );
 
                 /*let block_line_number = image_block_slice_start_vertical_experimental!(
