@@ -16,8 +16,9 @@ use png::{
     constants::{PNG_FILE_EXTENSION, PNG_OUTPUT_FILE_SUFFIX},
     image_block_height, image_block_size, image_block_slice_end,
     image_block_slice_end_vertical_experimental, image_block_slice_start,
-    image_block_slice_start_experimental, image_block_slice_start_vertical,
-    image_block_slice_start_vertical_experimental, image_block_width,
+    image_block_slice_start_experimental, image_block_slice_start_horizontal_experimental,
+    image_block_slice_start_vertical, image_block_slice_start_vertical_experimental,
+    image_block_width,
     images::{ImageBlock, ImageDataTensorShape, ImageDataTensorShapeFormat},
     input_pipeline_slice_end, input_pipeline_slice_start,
     png_core::{create_png_from_collective, create_png_from_png_files, Png},
@@ -454,6 +455,7 @@ impl Model {
         &self,
         input_pipeline: &Collective<T>,
         image_data_tensor_shape_format: ImageDataTensorShapeFormat,
+        verbose: bool,
     ) where
         T: Default + Copy,
     {
@@ -507,11 +509,20 @@ impl Model {
 
             match png_png {
                 Some(png) => {
-                    //png.traverse();
+                    let result = png.save_to_file(&path);
 
-                    //println!("Saving PNG file: {}", output_path.display());
-                    //png.save_to_file(&output_path);
-                    png.save_to_file(&path);
+                    match result {
+                        Ok(_) => {
+                            if verbose {
+                                println!("Saved PNG to file: \"{}\"", path.display());
+                                println!("Traversing PNG of \"{}\" file:", path.display());
+                                png.traverse();
+                            }
+                        }
+                        Err(e) => {
+                            println!("Model::start_training_loop() Error: {}", e);
+                        }
+                    }
                 }
                 None => {
                     println!("Failed to create PNG from Collective<T>");
@@ -756,6 +767,17 @@ impl Model {
                         random_context_target_block_numbers[j],
                         number_of_blocks_per_line,
                         overlapping_pixels_per_column,
+                        &dims_image_block
+                    )
+                );
+
+                println!(
+                    "image_block_slice_start_horizontal_experimental = {}",
+                    image_block_slice_start_horizontal_experimental!(
+                        random_context_target_block_numbers[j],
+                        number_of_blocks_per_line,
+                        image_data_tensor_shape.get_channels(),
+                        overlapping_pixels_per_line,
                         &dims_image_block
                     )
                 );

@@ -5,19 +5,41 @@
 
 #![allow(non_snake_case)]
 
-use std::{cell::RefCell, fs::{File, metadata}, io::Read, io::Write, path::Path, path::PathBuf, rc::Rc, str};
-use argsv::{common_argc, find_arg, help, help_line, process_argument, start, stop, COMMANDLINES, PCLA};
-use Numrs::{dimensions::Dimensions, collective::Collective, num::Tensor};
-use png::{constants::{PNG_IHDR_CHUNK, PNG_OUTPUT_FILE_SUFFIX}, png_core::Png, png_core::Chunk, png_core::DeflatedData, png_core::InflatedData, png_core::create_png_from_deflated_data, png_core::create_png_from_boxed_defalted_data, png_core::modify_png_pixel_data, images::{ImageDataTensorShape, ImageDataTensorShapeFormat, ImageBlock}};
+use argsv::{
+    common_argc, find_arg, help, help_line, process_argument, start, stop, COMMANDLINES, PCLA,
+};
+use png::{
+    constants::{PNG_IHDR_CHUNK, PNG_OUTPUT_FILE_SUFFIX},
+    images::{ImageBlock, ImageDataTensorShape, ImageDataTensorShapeFormat},
+    png_core::create_png_from_boxed_defalted_data,
+    png_core::create_png_from_deflated_data,
+    png_core::modify_png_pixel_data,
+    png_core::Chunk,
+    png_core::DeflatedData,
+    png_core::InflatedData,
+    png_core::Png,
+};
+use std::{
+    cell::RefCell,
+    fs::{metadata, File},
+    io::Read,
+    io::Write,
+    path::Path,
+    path::PathBuf,
+    rc::Rc,
+    str,
+};
+use Numrs::{collective::Collective, dimensions::Dimensions, num::Tensor};
 
+use jepa::constants::{
+    JEPA_IMAGE_BIT_DEPTH, JEPA_IMAGE_CHANNELS, JEPA_IMAGE_COLOR_TYPE, JEPA_IMAGE_HEIGHT,
+    JEPA_IMAGE_WIDTH,
+};
 use jepa::model::{Model, ModelConfig};
-use jepa::constants::{JEPA_IMAGE_HEIGHT, JEPA_IMAGE_WIDTH, JEPA_IMAGE_CHANNELS, JEPA_IMAGE_COLOR_TYPE, JEPA_IMAGE_BIT_DEPTH};
 
 //use jepa::images::{/*ImageDataTensorShape*//*, ImageDataTensorShapeFormat*/};
 
-
 fn main() {
-
     let command_lines = "h -h help --help ? /? (Displays help screen)\n\
                          v -v version --version /v (Displays version number)\n\
                          t -t traverse --traverse /t (Traverses PNG file structure and displays it)\n\
@@ -30,86 +52,105 @@ fn main() {
 
     let arg_suffix: *mut COMMANDLINES;
     let arg_epoch: *mut COMMANDLINES;
+    let arg_verbose: *mut COMMANDLINES;
 
     let mut suffix_token: Option<&str> = Some(PNG_OUTPUT_FILE_SUFFIX);
-    let mut epochs_number: usize = 1;                  
+    let mut epochs_number: usize = 1;
 
     // Get the command-line arguments as an iterator
     let args: Vec<String> = std::env::args().collect();
     // Create a Vec<CString> from the Vec<String>
-    let c_args: Vec<std::ffi::CString> = args.iter().map(|s| std::ffi::CString::new(s.as_str()).expect("Failed to create CString")).collect();
+    let c_args: Vec<std::ffi::CString> = args
+        .iter()
+        .map(|s| std::ffi::CString::new(s.as_str()).expect("Failed to create CString"))
+        .collect();
     // Get the equivalent of argv in C. Create a Vec<*const c_char> from the Vec<CString>.
     let c_argv: Vec<*const std::os::raw::c_char> = c_args.iter().map(|s| s.as_ptr()).collect();
-    // Get the C equivalent of argc.    
+    // Get the C equivalent of argc.
     let argc: i32 = c_args.len() as std::os::raw::c_int;
 
     let mut ncommon: i32 = 0;
 
-    let head = start (argc, c_argv.clone(), command_lines);
-        
-        ncommon = common_argc (head);
+    let head = start(argc, c_argv.clone(), command_lines);
 
-        let arg_help = find_arg (head, command_lines, "h");
-        if !arg_help.is_null() || argc < 1 {
-            
-            help (head, command_lines);
-            stop (head); 
+    ncommon = common_argc(head);
 
-            return;
+    let arg_help = find_arg(head, command_lines, "h");
+    if !arg_help.is_null() || argc < 1 {
+        help(head, command_lines);
+        stop(head);
+
+        return;
+    }
+
+    arg_suffix = find_arg(head, command_lines, "--suffix");
+    if !arg_suffix.is_null() {
+        let arg_suffix_clap: *mut PCLA = unsafe { (*arg_suffix).get_clap() };
+        if unsafe { (*arg_suffix_clap).get_argc() } > 0 {
+            suffix_token = Some(unsafe {
+                str::from_utf8_unchecked(
+                    &args[unsafe { (*arg_suffix_clap).get_index_number() as usize } + 1].as_bytes(),
+                )
+            });
         }
-        
-        arg_suffix = find_arg (head, command_lines, "--suffix");
-        if !arg_suffix.is_null() {
+    }
 
-            let arg_suffix_clap: *mut PCLA = unsafe {(*arg_suffix).get_clap()};
-            if unsafe{(*arg_suffix_clap).get_argc()} > 0 {
+    arg_epoch = find_arg(head, command_lines, "--epoch");
+    if !arg_epoch.is_null() {
+        let arg_epoch_clap: *mut PCLA = unsafe { (*arg_epoch).get_clap() };
+        if unsafe { (*arg_epoch_clap).get_argc() } > 0 {
+            //epochs_number = args[unsafe{(*arg_epoch_clap).get_index_number() as usize} + 1].parse::<usize>();
 
-                suffix_token = Some(unsafe { str::from_utf8_unchecked(&args[unsafe{(*arg_suffix_clap).get_index_number() as usize} + 1].as_bytes()) });
-             } 
+            if let Ok(parsed_epochs) =
+                args[unsafe { (*arg_epoch_clap).get_index_number() as usize } + 1].parse::<usize>()
+            {
+                epochs_number = parsed_epochs;
+            } else {
+                // Handle parsing error
+                eprintln!(
+                    "Invalid epoch value: {}, epochs default to {}",
+                    args[unsafe { (*arg_epoch_clap).get_index_number() as usize } + 1],
+                    epochs_number
+                );
+                // Set default or return error
+            }
         }
-        
-        arg_epoch = find_arg (head, command_lines, "--epoch");
-        if !arg_epoch.is_null() {
-            let arg_epoch_clap: *mut PCLA = unsafe {(*arg_epoch).get_clap()};
-            if unsafe{(*arg_epoch_clap).get_argc()} > 0 {
-                
-                //epochs_number = args[unsafe{(*arg_epoch_clap).get_index_number() as usize} + 1].parse::<usize>();
+    }
 
-                if let Ok(parsed_epochs) = args[unsafe{(*arg_epoch_clap).get_index_number() as usize} + 1].parse::<usize>() {
+    let mut verbose: bool = false;
+    arg_verbose = find_arg(head, command_lines, "--verbose");
+    if !arg_verbose.is_null() {
+        verbose = true;
+    }
 
-                    epochs_number = parsed_epochs;                                        
-                } else {
+    stop(head);
 
-                    // Handle parsing error
-                    eprintln!("Invalid epoch value: {}, epochs default to {}", args[unsafe{(*arg_epoch_clap).get_index_number() as usize} + 1], epochs_number);
-                    // Set default or return error
-                }
-            }            
-        }
-        
-    stop (head); 
-    
     /*
-        Instancite model composite here....
-     */
-    let image_data_tensor = ImageDataTensorShape::new(JEPA_IMAGE_CHANNELS, JEPA_IMAGE_HEIGHT, JEPA_IMAGE_WIDTH);
-    let model_config = ModelConfig::new(0.01 /* learning rate */, (ncommon - 1) as usize  /* batch size */, epochs_number /* epochs */);
+       Instancite model composite here....
+    */
+    let image_data_tensor =
+        ImageDataTensorShape::new(JEPA_IMAGE_CHANNELS, JEPA_IMAGE_HEIGHT, JEPA_IMAGE_WIDTH);
+    let model_config = ModelConfig::new(
+        0.01,                   /* learning rate */
+        (ncommon - 1) as usize, /* batch size */
+        epochs_number,          /* epochs */
+    );
     let model = Model::new(model_config, image_data_tensor);
-    let input_pipeline_dims: Box<Dimensions> = model.create_input_pipeline_with_prev(ImageDataTensorShapeFormat::HWC);
+    let input_pipeline_dims: Box<Dimensions> =
+        model.create_input_pipeline_with_prev(ImageDataTensorShapeFormat::HWC);
     let mut input_pipeline: Collective<u8> = Collective::<u8>::from_shape(input_pipeline_dims);
-    
+
     input_pipeline[0] = 1.0 as u8; // Example of setting a value in the Collective
 
     let mut counter: usize = 0;
     /*
-        Model instantiation ends here.
-     */ 
-           
+       Model instantiation ends here.
+    */
+
     // for loop with range
     for i in 1..ncommon {
-
         let arg = &args[i as usize];
-        
+
         let path: &Path = Path::new(arg);
 
         let mut height: u32 = 0;
@@ -120,43 +161,42 @@ fn main() {
 
         // Check if the file exists and has a PNG extension
         if path.exists() && path.extension().map_or(false, |ext| ext == "png") {
-
             println!("Processing PNG file: {}", arg);
-                               
+
             /*
              * The file will be closed automatically when `file` goes out of scope.
              * If needed, you can limit its lifetime by introducing a new block scope.
              */
             let file = File::open(&path);
-            
+
             match file {
-
-                Err (why) => {
-                            
+                Err(why) => {
                     // Skip problematic files instead of panicking
-                    println!("Skipping file: {}, couldn't open because of {}.", path.display().to_string(), why);
+                    println!(
+                        "Skipping file: {}, couldn't open because of {}.",
+                        path.display().to_string(),
+                        why
+                    );
 
-                    continue;  // Move to the next file in the loop
+                    continue; // Move to the next file in the loop
                 }
-                                        
-                Ok (mut f) => {
-                    
+
+                Ok(mut f) => {
                     /*
                      * Reads the entire file into a pre-allocated buffer.
-                     * 
+                     *
                      * - Uses `path.metadata()`.
                      * - Handles potential errors explicitly instead of unwrapping.
                      * - Buffer size matches the file length (in bytes).
-                     */                    
+                     */
                     let file_size = match path.metadata() {
                         Ok(meta) => meta.len() as usize,
                         Err(e) => {
-
                             println!("Failed to read metadata for {}: {}", path.display(), e);
-                           
+
                             // About `drop()`:
                             // - NOT NEEDED HERE because:
-                            //   1. `continue` automatically triggers Rust's destructors (including file closing)                            
+                            //   1. `continue` automatically triggers Rust's destructors (including file closing)
                             //   2. Rust's RAII guarantees cleanup when variables go out of scope
                             //
                             // When WOULD you need `drop()`?
@@ -167,19 +207,18 @@ fn main() {
                             continue; // Skip to next file
                         }
                     };
-                    
+
                     let mut buffer = vec![0; file_size]; // Buffer to store file contents, buffer size matches the file size
-        
+
                     //f.read (&mut buffer).unwrap();
 
                     // Read file contents into the buffer
                     if let Err(e) = f.read(&mut buffer) {
-
                         println!("Failed to read file {}: {}", path.display(), e);
 
                         // About `drop()`:
                         // - NOT NEEDED HERE because:
-                        //   1. `continue` automatically triggers Rust's destructors (including file closing)                            
+                        //   1. `continue` automatically triggers Rust's destructors (including file closing)
                         //   2. Rust's RAII guarantees cleanup when variables go out of scope
                         //
                         // When WOULD you need `drop()`?
@@ -189,83 +228,86 @@ fn main() {
 
                         continue;
                     }
-        
-                    /*    
-                        The idiomatic way to control how long it's open is to use a scope { }.
-                        The file will be automatically dropped when the "scope" is done (this is usually when a function exits).
-                        There's one other way to manually close the file, using the drop() function. The drop() function does the exact same thing as what happens when the scope around the file closes. 
-                     */
-                    drop(f); 
-                                        
+
+                    /*
+                       The idiomatic way to control how long it's open is to use a scope { }.
+                       The file will be automatically dropped when the "scope" is done (this is usually when a function exits).
+                       There's one other way to manually close the file, using the drop() function. The drop() function does the exact same thing as what happens when the scope around the file closes.
+                    */
+                    drop(f);
+
                     let png = Png::new(buffer);
 
-                    match png.match_color_type_and_bit_depth(JEPA_IMAGE_COLOR_TYPE, JEPA_IMAGE_BIT_DEPTH) {
-                                                
+                    match png
+                        .match_color_type_and_bit_depth(JEPA_IMAGE_COLOR_TYPE, JEPA_IMAGE_BIT_DEPTH)
+                    {
                         false => {
-
                             println!("Skipping file: {}, it has unsupported color type/bit depth combination.", path.display().to_string());
 
-                            continue; // Skip to next file in the loop    
-                        },
-                        _ => {
-
-                        }                        
+                            continue; // Skip to next file in the loop
+                        }
+                        _ => {}
                     }
 
                     let chunk: Option<&Chunk> = png.get_chunk_by_type(PNG_IHDR_CHUNK);
 
                     match chunk {
-
-                        Some (chunk) => {
-
+                        Some(chunk) => {
                             height = chunk.get_height();
                             width = chunk.get_width();
 
                             color_type = chunk.get_color_type();
                             bit_depth = chunk.get_bit_depth();
                         }
-                        None => {
-
-                        }
+                        None => {}
                     }
 
                     // let all_idat_data_deflated: *mut DeflatedData = png.get_all_idat_data_as_DeflatedData();
 
                     /*
-                        Concatenate → Inflate
-                        PNG IDAT Chunks Are Fragments of a Single Zlib Stream
-                        The PNG spec treats all IDAT chunks as parts of one continuous compressed stream
-                        Concatenating them first is required for correct decompression
-                        (get_all_idat_data_as_vec() → get_inflated_data()) follows the standard.
-                     */
+                       Concatenate → Inflate
+                       PNG IDAT Chunks Are Fragments of a Single Zlib Stream
+                       The PNG spec treats all IDAT chunks as parts of one continuous compressed stream
+                       Concatenating them first is required for correct decompression
+                       (get_all_idat_data_as_vec() → get_inflated_data()) follows the standard.
+                    */
                     let all_idat_data: Vec<u8> = png.get_all_idat_data_as_vec(); // Combine raw IDAT chunks
                     let mut dat: *mut InflatedData = png.get_inflated_data(&all_idat_data); // Inflate the combined data all at once
 
-                    let dat_without_filter_method_byte: *mut InflatedData = png.remove_filter_bytes_from_inflated_data(dat);
+                    let dat_without_filter_method_byte: *mut InflatedData =
+                        png.remove_filter_bytes_from_inflated_data(dat);
 
                     /*
-                        Modifying pixels after inflation  
+                        Modifying pixels after inflation
                     */
-                    dat = modify_png_pixel_data(dat, Vec::from([0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF]), width, height, color_type, bit_depth);
+                    dat = modify_png_pixel_data(
+                        dat,
+                        Vec::from([0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF]),
+                        width,
+                        height,
+                        color_type,
+                        bit_depth,
+                    );
 
                     /*
-                        This is the place where input pipeline gets created
-                     */
-                     //
+                       This is the place where input pipeline gets created
+                    */
+                    //
                     /*
-                        That special place ends here
-                     */ 
+                       That special place ends here
+                    */
 
                     /*
                         The Box now owns the memory pointed to by dat.
-                        The Box is a smart pointer that manages the memory of its contents.                        
+                        The Box is a smart pointer that manages the memory of its contents.
                         If boxed_dat goes out of scope without being passed further, Drop will free the memory
                     */
                     let mut boxed_dat: Box<DeflatedData>;
                     let mut boxed_dat_without_filter_method_byte: Box<InflatedData>;
-                    unsafe { 
-                        boxed_dat = Box::from_raw(dat); 
-                        boxed_dat_without_filter_method_byte = Box::from_raw(dat_without_filter_method_byte);
+                    unsafe {
+                        boxed_dat = Box::from_raw(dat);
+                        boxed_dat_without_filter_method_byte =
+                            Box::from_raw(dat_without_filter_method_byte);
 
                         // Just to show that the memory is managed by the Box and no dereferencing is needed to access the data
                         //println!("Length of boxed_dat = {}", boxed_dat.len());
@@ -279,65 +321,69 @@ fn main() {
                         //drop(boxed_dat); // Commented out because it is implicitly dropped when the scope ends
                     };
 
-                    
                     //boxed_dat_without_filter_method_byte.data[]
 
-                    println!{"Counter = {}", counter};
+                    println! {"Counter = {}", counter};
 
                     unsafe {
                         for i in 0..boxed_dat_without_filter_method_byte.len() {
-
                             //println!("{}: {}", i, boxed_dat_without_filter_method_byte.data[i]);
-                            input_pipeline[counter] = *boxed_dat_without_filter_method_byte.data.add(i as usize) as u8; // Example of setting a value in the Collective
+                            input_pipeline[counter] =
+                                *boxed_dat_without_filter_method_byte.data.add(i as usize) as u8; // Example of setting a value in the Collective
 
                             counter += 1;
                         }
-                    }   
-                    
+                    }
+
                     /*
-                        Deflate the entire pixel data in one go. 
+                        Deflate the entire pixel data in one go.
                         Split the result into IDAT chunks (optional and not implemented yet, but some encoders do this for streaming).
                     */
                     //let deflated_data: *mut DeflatedData = png.get_deflated_data(dat);
                     /*
-                        Ownership Transfer in get_deflated_data_new
-                        When you pass a Box<InflatedData> to get_deflated_data, ownership is transferred to the function.
-                        The Box and its contents will be dropped (freed) at the end of the function call, not at the end of main() or the outer scope.                        
-                     */
-                    let deflated_data: *mut DeflatedData = png.get_deflated_data_from_boxed_inflated_data (boxed_dat);
+                       Ownership Transfer in get_deflated_data_new
+                       When you pass a Box<InflatedData> to get_deflated_data, ownership is transferred to the function.
+                       The Box and its contents will be dropped (freed) at the end of the function call, not at the end of main() or the outer scope.
+                    */
+                    let deflated_data: *mut DeflatedData =
+                        png.get_deflated_data_from_boxed_inflated_data(boxed_dat);
 
                     let boxed_deflated_data: Box<DeflatedData>;
-                    unsafe {                        
+                    unsafe {
                         boxed_deflated_data = Box::from_raw(deflated_data);
                     }
-                                        
-                    let output_path = path.with_extension("").with_extension(&format!("{}.png", suffix_token.unwrap()));
+
+                    let output_path = path
+                        .with_extension("")
+                        .with_extension(&format!("{}.png", suffix_token.unwrap()));
 
                     println!("Output PNG file will be: {}", output_path.display());
-                    
-                    let png_from_boxed_deflated_data: Option<Png> = create_png_from_boxed_defalted_data(width, height, boxed_deflated_data, &output_path);
+
+                    let png_from_boxed_deflated_data: Option<Png> =
+                        create_png_from_boxed_defalted_data(
+                            width,
+                            height,
+                            boxed_deflated_data,
+                            &output_path,
+                        );
 
                     match png_from_boxed_deflated_data {
                         Some(png) => {
-
                             png.traverse();
 
                             println!("Saving PNG file: {}", output_path.display());
                             png.save_to_file(&output_path);
-                            
-                        },
+                        }
                         None => {
                             println!("Failed to create PNG from boxed deflated data");
                         }
                     }
                 }
             }
-
         } else {
-
             println!("Invalid or non-existent PNG file: {}", arg);
-        }                
+        }
     }
 
-    model.start_training_loop::<u8> (&input_pipeline, ImageDataTensorShapeFormat::HWC);
-} 
+    model.start_training_loop::<u8>(&input_pipeline, ImageDataTensorShapeFormat::HWC, verbose);
+}
