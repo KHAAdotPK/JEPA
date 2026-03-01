@@ -15,13 +15,14 @@ use crate::{
 use png::{
     constants::{PNG_FILE_EXTENSION, PNG_OUTPUT_FILE_SUFFIX},
     image_block_height, image_block_size, image_block_slice_end,
-    image_block_slice_end_vertical_experimental, image_block_slice_start,
-    image_block_slice_start_experimental, image_block_slice_start_horizontal_experimental,
-    image_block_slice_start_vertical, image_block_slice_start_vertical_experimental,
-    image_block_width,
+    image_block_slice_end_horizontal_experimental, image_block_slice_end_vertical_experimental,
+    image_block_slice_start, image_block_slice_start_experimental,
+    image_block_slice_start_horizontal_experimental, image_block_slice_start_vertical,
+    image_block_slice_start_vertical_experimental, image_block_width,
     images::{ImageBlock, ImageDataTensorShape, ImageDataTensorShapeFormat},
     input_pipeline_slice_end, input_pipeline_slice_start,
     png_core::{create_png_from_collective, create_png_from_png_files, Png},
+    zero_based_block_number_horizontal_experimental,
 };
 use std::{cell::RefCell, path::Path, rc::Rc};
 use Numrs::{collective::Collective, dimensions::Dimensions, header::Axis, num::Tensor};
@@ -703,7 +704,7 @@ impl Model {
                     &dims_image_block
                 );
 
-                let image_block_slice: Box<Collective<T>> = input_pipeline_slice.get_slice(
+                /*let image_block_slice: Box<Collective<T>> = input_pipeline_slice.get_slice(
                     image_block_slice_start!(
                         random_context_target_block_numbers[j],
                         image_block.get_width(),
@@ -714,6 +715,37 @@ impl Model {
                         image_block.get_width(),
                         image_data_tensor_shape.get_channels()
                     ),
+                    &dims_image_block,
+                    Axis::Rows,
+                );*/
+
+                println!(
+                    "WAR WAR WAR WAR = {}",
+                    zero_based_block_number_horizontal_experimental! {
+                    random_context_target_block_numbers[j],
+                    number_of_blocks_per_line}
+                );
+
+                println!(
+                    "GET WIDTH = {}, {}",
+                    dims_image_block.get_width(),
+                    (overlapping_pixels_per_line / number_of_blocks_per_line).floor()
+                );
+
+                let image_block_slice: Box<Collective<T>> = input_pipeline_slice.get_slice(
+                    image_block_slice_start_vertical_experimental!(
+                        random_context_target_block_numbers[j],
+                        number_of_blocks_per_line,
+                        overlapping_pixels_per_column,
+                        &dims_image_block
+                    ),
+                    image_block_slice_start_horizontal_experimental!(
+                        random_context_target_block_numbers[j],
+                        number_of_blocks_per_line,
+                        /*image_data_tensor_shape.get_channels(),*/
+                        overlapping_pixels_per_line,
+                        &dims_image_block
+                    ) /*/ image_data_tensor_shape.get_channels()*/ as f64,
                     &dims_image_block,
                     Axis::Rows,
                 );
@@ -745,7 +777,7 @@ impl Model {
                     number_of_blocks_per_column
                 );
 
-                input_pipeline_slice.get_slice(
+                /*input_pipeline_slice.get_slice(
                     image_block_slice_start_vertical_experimental!(
                         random_context_target_block_numbers[j],
                         number_of_blocks_per_line,
@@ -759,6 +791,16 @@ impl Model {
                     ),
                     &dims_image_block,
                     Axis::Rows,
+                );*/
+
+                println!(
+                    "IMAGE BLOCK SLICE START VERTICAL = {}",
+                    image_block_slice_start_vertical_experimental!(
+                        random_context_target_block_numbers[j],
+                        number_of_blocks_per_line,
+                        overlapping_pixels_per_column,
+                        &dims_image_block
+                    )
                 );
 
                 println!(
@@ -772,8 +814,19 @@ impl Model {
                 );
 
                 println!(
-                    "image_block_slice_start_horizontal_experimental = {}",
+                    "IMAGE BLOCK SLICE START HORIZONTAL = {}",
                     image_block_slice_start_horizontal_experimental!(
+                        random_context_target_block_numbers[j],
+                        number_of_blocks_per_line,
+                        /*image_data_tensor_shape.get_channels(),*/
+                        overlapping_pixels_per_line,
+                        &dims_image_block
+                    )
+                );
+
+                println!(
+                    "IMAGE BLOCK SLICE END HORIZONTAL = {}",
+                    image_block_slice_end_horizontal_experimental!(
                         random_context_target_block_numbers[j],
                         number_of_blocks_per_line,
                         image_data_tensor_shape.get_channels(),
@@ -788,10 +841,12 @@ impl Model {
                     &dims_image_block
                 );*/
 
-                println!(
-                    "-> Loope loop..... looop {}",
-                    image_block_slice.data.as_ref().unwrap().len()
-                );
+                /*if image_block_slice.data.is_some() {
+                    println!(
+                        "-> Loope loop..... looop {}",
+                        image_block_slice.data.as_ref().unwrap().len()
+                    );
+                }*/
 
                 //let path_text = format!("{}{}{}{}{}", JEPA_IMAGE_BLOCK_FILE_NAME_PRELUDE, random_context_target_block_numbers[j], JEPA_IMAGE_BLOCK_FILE_NAME_POSTLUDE, i + 1, JEPA_IMAGE_BLOCK_FILE_NAME_EXTENSION);
                 path_text = format!(
