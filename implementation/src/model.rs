@@ -7,18 +7,21 @@ use crate::{
     constants::{
         JEPA_IMAGES_ASPECT_RATIO, JEPA_IMAGE_BLOCK_FILE_NAME_EXTENSION,
         JEPA_IMAGE_BLOCK_FILE_NAME_POSTLUDE, JEPA_IMAGE_BLOCK_FILE_NAME_PRELUDE,
-        JEPA_NUMBER_OF_CONTEXT_BLOCKS, JEPA_NUMBER_OF_TARGET_BLOCKS,
+        JEPA_IMAGE_BLOCK_HEIGHT, JEPA_IMAGE_BLOCK_WIDTH, JEPA_NUMBER_OF_CONTEXT_BLOCKS,
+        JEPA_NUMBER_OF_TARGET_BLOCKS,
     }, /*, images::{ImageDataTensorShape, ImageDataTensorShapeFormat, ImageBlock}*/
     /*image_block_height,*/ /*image_block_height_vertical*//*, image_block_width*//*, image_block_width_vertical*//*, image_block_size*//*, image_block_size_vertical*//*, image_block_slice_start*//*, image_block_slice_start_vertical*//*, image_block_slice_end*//*, image_block_slice_end_vertical*//*, input_pipeline_slice_start*//*, input_pipeline_slice_end,*/
     sundry::random_whole_number,
 };
 use png::{
     constants::{PNG_FILE_EXTENSION, PNG_OUTPUT_FILE_SUFFIX},
-    image_block_height, image_block_size, image_block_slice_end,
+    image_block_height, image_block_height_experimental, image_block_size,
+    image_block_size_experimental, image_block_slice_end,
     image_block_slice_end_horizontal_experimental, image_block_slice_end_vertical_experimental,
     image_block_slice_start, image_block_slice_start_experimental,
     image_block_slice_start_horizontal_experimental, image_block_slice_start_vertical,
     image_block_slice_start_vertical_experimental, image_block_width,
+    image_block_width_experimental,
     images::{ImageBlock, ImageDataTensorShape, ImageDataTensorShapeFormat},
     input_pipeline_slice_end, input_pipeline_slice_start,
     png_core::{create_png_from_collective, create_png_from_png_files, Png},
@@ -544,17 +547,17 @@ impl Model {
 
             // Get dimensions of image block, it will be later used to divide the image into n many image blocks
             let image_block = ImageBlock::new(
-                image_block_height!(
+                image_block_height_experimental!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 ),
                 /*image_block_height_vertical!(image_data_tensor_shape),*/
-                image_block_width!(
+                image_block_width_experimental!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 ),
                 /*image_block_width_vertical!(image_data_tensor_shape),*/
-                image_block_size!(
+                image_block_size_experimental!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 ), /*image_block_size_vertical!(image_data_tensor_shape) as usize*/
@@ -563,14 +566,14 @@ impl Model {
             // Print dimensions of image block
             println!(
                 "Height = {}",
-                image_block_height!(
+                image_block_height_experimental!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 )
             );
             println!(
                 "Width =  {}",
-                image_block_width!(
+                image_block_width_experimental!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 )
