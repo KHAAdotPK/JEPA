@@ -15,13 +15,12 @@ use crate::{
 };
 use png::{
     constants::{PNG_FILE_EXTENSION, PNG_OUTPUT_FILE_SUFFIX},
-    image_block_height, image_block_height_experimental, image_block_size,
-    image_block_size_experimental, image_block_slice_end,
-    image_block_slice_end_horizontal_experimental, image_block_slice_end_vertical_experimental,
-    image_block_slice_start, image_block_slice_start_experimental,
-    image_block_slice_start_horizontal_experimental, image_block_slice_start_vertical,
-    image_block_slice_start_vertical_experimental, image_block_width,
-    image_block_width_experimental,
+    image_block_height_aspect_ratio, image_block_height_tiled, image_block_size_aspect_ratio,
+    image_block_size_tiled, image_block_slice_end, image_block_slice_end_horizontal_experimental,
+    image_block_slice_end_vertical_experimental, image_block_slice_start,
+    image_block_slice_start_experimental, image_block_slice_start_horizontal_experimental,
+    image_block_slice_start_vertical, image_block_slice_start_vertical_experimental,
+    image_block_width_aspect_ratio, image_block_width_tiled,
     images::{ImageBlock, ImageDataTensorShape, ImageDataTensorShapeFormat},
     input_pipeline_slice_end, input_pipeline_slice_start,
     png_core::{create_png_from_collective, create_png_from_png_files, Png},
@@ -547,17 +546,17 @@ impl Model {
 
             // Get dimensions of image block, it will be later used to divide the image into n many image blocks
             let image_block = ImageBlock::new(
-                image_block_height_experimental!(
+                image_block_height_tiled!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 ),
                 /*image_block_height_vertical!(image_data_tensor_shape),*/
-                image_block_width_experimental!(
+                image_block_width_tiled!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 ),
                 /*image_block_width_vertical!(image_data_tensor_shape),*/
-                image_block_size_experimental!(
+                image_block_size_tiled!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 ), /*image_block_size_vertical!(image_data_tensor_shape) as usize*/
@@ -566,14 +565,14 @@ impl Model {
             // Print dimensions of image block
             println!(
                 "Height = {}",
-                image_block_height_experimental!(
+                image_block_height_tiled!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 )
             );
             println!(
                 "Width =  {}",
-                image_block_width_experimental!(
+                image_block_width_tiled!(
                     input_pipeline_slice.data.as_ref().unwrap().len(),
                     image_data_tensor_shape.get_channels()
                 )
